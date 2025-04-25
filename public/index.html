@@ -546,6 +546,17 @@
         height: 250px; /* 小屏幕图表高度略减 */
       }
     }
+    /* 监控复选框样式 */
+    input[type="checkbox"] {
+      accent-color: #4CAF50; /* 选中时颜色 */
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    label {
+      color: var(--text-color);
+      user-select: none;
+    }
   </style>
 </head>
 <body>
@@ -934,53 +945,84 @@
       }
     }
 
-    class MetricsManager {
+    class MetricsStreamManager {
       constructor() {
-        this.eventSources = new Map();
-        this.instanceOwners = new Map();
+        this.eventSource = null;
+        this.clientId = null;
+        this.subscribedInstances = new Set();
       }
 
-      async connect(instanceId, username) {
-        if (this.eventSources.has(instanceId)) {
-          return;
+      connect(subscribedInstances = []) {
+        if (this.eventSource) {
+          this.eventSource.close();
         }
 
-        try {
-          const eventSource = new EventSource(
-            `/api/proxy/live-metrics/${username}/${instanceId.split('/')[1]}`
-          );
+        this.subscribedInstances = new Set(subscribedInstances);
+        const instancesParam = Array.from(this.subscribedInstances).join(',');
+        const url = `/api/proxy/live-metrics-stream?instances=${encodeURIComponent(instancesParam)}`;
+        this.eventSource = new EventSource(url);
 
-          this.instanceOwners.set(instanceId, username);
+        this.eventSource.addEventListener("metric", (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            const { repoId, metrics } = data;
+            updateServerCard(metrics, repoId);
+          } catch (error) {
+            console.error(`解析监控数据失败:`, error);
+          }
+        });
 
-          eventSource.addEventListener("metric", (event) => {
-            try {
-              const data = JSON.parse(event.data);
-              updateServerCard(data, instanceId);
-            } catch (error) {
-              console.error(`解析数据失败 (${instanceId}):`, error);
-            }
-          });
+        this.eventSource.onerror = (error) => {
+          console.error(`SSE 连接错误:`, error);
+          this.eventSource.close();
+          this.eventSource = null;
+          // 可选：尝试重新连接
+          setTimeout(() => this.connect(Array.from(this.subscribedInstances)), 5000);
+        };
 
-          eventSource.onerror = (error) => {
-            eventSource.close();
-            this.eventSources.delete(instanceId);
-            updateServerCard(null, instanceId, false);
-          };
-
-          this.eventSources.set(instanceId, eventSource);
-        } catch (error) {
-          console.error(`连接失败 (${username}/${instanceId}):`, error);
-          updateServerCard(null, instanceId, false);
-        }
+        console.log(`SSE 连接已建立，订阅实例: ${instancesParam || '无'}`);
       }
 
-      disconnectAll() {
-        this.eventSources.forEach(es => es.close());
-        this.eventSources.clear();
+      updateSubscriptions(newInstances) {
+        if (!this.clientId) {
+          this.clientId = localStorage.getItem('sseClientId') || crypto.randomUUID();
+          localStorage.setItem('sseClientId', this.clientId);
+        }
+
+        this.subscribedInstances = new Set(newInstances);
+        fetch('/api/proxy/update-subscriptions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            clientId: this.clientId,
+            instances: Array.from(this.subscribedInstances)
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            console.log(`订阅更新成功: ${Array.from(this.subscribedInstances).join(', ') || '无'}`);
+          } else {
+            console.error(`订阅更新失败:`, data.error);
+          }
+        })
+        .catch(error => {
+          console.error(`更新订阅请求失败:`, error);
+        });
+      }
+
+      disconnect() {
+        if (this.eventSource) {
+          this.eventSource.close();
+          this.eventSource = null;
+          console.log(`SSE 连接已断开`);
+        }
       }
     }
 
-    const metricsManager = new MetricsManager();
+    const metricsStreamManager = new MetricsStreamManager();
     const instanceMap = new Map();
     const serverStatus = new Map();
     let allInstances = []; // 存储所有实例数据，用于过滤和排序
@@ -991,18 +1033,21 @@
       const instances = await fetchInstances();
       allInstances = instances;
       renderInstances(allInstances);
-      instances.forEach(instance => {
-        if (instance.status.toLowerCase() === 'running') {
-          metricsManager.connect(instance.repo_id, instance.owner);
-        }
-      });
+      
+      // 默认只监控状态为 running 的实例
+      const runningInstances = instances
+        .filter(instance => instance.status.toLowerCase() === 'running')
+        .map(instance => instance.repo_id);
+      
+      metricsStreamManager.connect(runningInstances);
+      
       updateSummary();
       updateActionButtons(isLoggedIn);
     }
 
     // 手动刷新数据函数
     async function refreshData() {
-      metricsManager.disconnectAll();
+      metricsStreamManager.disconnect();
       // 销毁所有图表实例
       chartInstances.forEach(chart => {
         if (chart) {
@@ -1205,7 +1250,13 @@
               </svg>
               <div>${instance.name} (${instance.repo_id})</div>
             </div>
-            <button class="chart-toggle-button" onclick="toggleChart('${instanceId}')">查看图表</button>
+            <div>
+              <label style="display: inline-flex; align-items: center; gap: 5px; font-size: 13px; cursor: pointer;">
+                监控
+                <input type="checkbox" id="monitor-${instanceId}" onchange="toggleMonitorInstance('${instanceId}', this.checked)" ${instance.status.toLowerCase() === 'running' ? 'checked' : ''}>
+              </label>
+              <button class="chart-toggle-button" onclick="toggleChart('${instanceId}')">查看图表</button>
+            </div>
           </div>
           <div class="metric-grid">
             <div class="metric-item">
@@ -1446,7 +1497,7 @@
     setInterval(updateSummary, 5000);
 
     setInterval(async () => {
-      metricsManager.disconnectAll();
+      metricsStreamManager.disconnect();
       await initialize();
     }, 300000);
 
@@ -1484,7 +1535,7 @@
       // 重新渲染过滤和排序后的实例
       instanceMap.clear();
       serverStatus.clear();
-      metricsManager.disconnectAll();
+      metricsStreamManager.disconnect();
       // 销毁现有图表实例
       chartInstances.forEach(chart => {
         if (chart) {
@@ -1493,13 +1544,29 @@
       });
       chartInstances.clear();
       renderInstances(filteredInstances);
-      filteredInstances.forEach(instance => {
-        if (instance.status.toLowerCase() === 'running') {
-          metricsManager.connect(instance.repo_id, instance.owner);
-        }
-      });
+      
+      // 重新计算当前订阅的实例，只保留仍可见的实例
+      const visibleInstanceIds = new Set(filteredInstances.map(instance => instance.repo_id));
+      const updatedSubscriptions = Array.from(metricsStreamManager.subscribedInstances)
+        .filter(instanceId => visibleInstanceIds.has(instanceId));
+      metricsStreamManager.subscribedInstances = new Set(updatedSubscriptions);
+      metricsStreamManager.connect(updatedSubscriptions); // 重新连接
+      
       updateSummary();
       updateActionButtons(isLoggedIn);
+    }
+
+    // 新增函数：切换实例监控状态
+    function toggleMonitorInstance(instanceId, checked) {
+      const checkbox = document.getElementById(`monitor-${instanceId}`);
+      if (!checkbox) return;
+
+      if (checked) {
+        metricsStreamManager.subscribedInstances.add(instanceId);
+      } else {
+        metricsStreamManager.subscribedInstances.delete(instanceId);
+      }
+      metricsStreamManager.updateSubscriptions(Array.from(metricsStreamManager.subscribedInstances));
     }
   </script>
 </body>
