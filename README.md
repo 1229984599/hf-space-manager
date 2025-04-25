@@ -15,6 +15,12 @@
 - **安全性**：登录凭据通过后端 API 验证，使用临时会话 token 维护登录状态。
 - **外部 API**：提供 RESTful API 接口，允许第三方应用查询实例信息和管理实例。
 
+## 特别鸣谢
+
+2.0版本基于L站神墨佬提供的代码，整合了1.0版本功能，进行的重构。特此鸣谢！
+
+神墨代码：https://linux.do/t/topic/426106
+
 ## 界面预览
 ### 未登录状态下只能查看无操作权限
 ![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/未登录.png?raw=true)
