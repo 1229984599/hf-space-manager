@@ -1,4 +1,4 @@
-# HuggingFace 实例监控面板
+# HF Space Manager
 
 [![Docker Build](https://img.shields.io/badge/Docker-Build-blue)](https://hub.docker.com/repository/docker/yourusername/huggingface-monitor) [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
