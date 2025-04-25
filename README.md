@@ -4,13 +4,6 @@
 
 一个现代化、美观的监控面板，用于监控和管理 HuggingFace Spaces 实例。通过实时数据展示、状态监控以及操作控制（如重启和重建），帮助用户高效管理自己的 HuggingFace 实例。
 
-## 未登录状态下只能查看无操作权限
-![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/未登录.png?raw=true)
-## 登录状态下支持操作
-![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/已登录.png?raw=true)
-## 支持夜间模式
-![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/夜间模式.png?raw=true)
-
 ## 功能特性
 
 - **实时监控**：显示 HuggingFace Spaces 实例的运行状态、CPU 使用率、内存占用、上传和下载速率等关键指标。
@@ -21,6 +14,14 @@
 - **Docker 部署**：提供 Docker 和 Docker Compose 支持，快速部署到任何支持 Docker 的环境。
 - **安全性**：登录凭据通过后端 API 验证，使用临时会话 token 维护登录状态。
 - **外部 API**：提供 RESTful API 接口，允许第三方应用查询实例信息和管理实例。
+
+## 界面预览
+### 未登录状态下只能查看无操作权限
+![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/未登录.png?raw=true)
+### 登录状态下支持操作
+![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/已登录.png?raw=true)
+### 支持夜间模式
+![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/夜间模式.png?raw=true)
 
 ## 技术栈
 
