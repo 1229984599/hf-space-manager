@@ -52,15 +52,15 @@
 
    ```bash
    # 拉取镜像（替换为实际镜像地址）
-   docker pull yourusername/huggingface-monitor:latest
+   docker pull yourusername/hf-space-manager:latest
    ```
 
    或者从源代码构建：
 
    ```bash
-   git clone https://github.com/yourusername/huggingface-monitor.git
-   cd huggingface-monitor
-   docker build -t huggingface-monitor .
+   git clone https://github.com/yourusername/hf-space-manager.git
+   cd hf-space-manager
+   docker build -t hf-space-manager .
    ```
 
 2. **配置环境变量**
@@ -87,8 +87,8 @@
      -e API_KEY="your_api_key_here" \
      -e USER_NAME="admin" \
      -e USER_PASSWORD="secretpassword" \
-     --name huggingface-monitor \
-     huggingface-monitor
+     --name hf-space-manager \
+     hf-space-manager
    ```
 
    或者使用 Docker Compose（推荐）：
@@ -98,9 +98,9 @@
    ```yaml
    version: '3'
    services:
-     huggingface-monitor:
-       image: huggingface-monitor:latest
-       container_name: huggingface-monitor
+     hf-space-manager:
+       image: hf-space-manager:latest
+       container_name: hf-space-manager
        ports:
          - "8080:8080"
        environment:
@@ -126,8 +126,8 @@
 1. **克隆代码库**
 
    ```bash
-   git clone https://github.com/yourusername/huggingface-monitor.git
-   cd huggingface-monitor
+   git clone https://github.com/yourusername/hf-space-manager.git
+   cd hf-space-manager
    ```
 
 2. **安装依赖**
@@ -344,15 +344,7 @@ curl -X POST "http://localhost:8080/api/v1/action/hf_xxx123/user1/space1/rebuild
 
 ## 贡献指南
 
-欢迎对本项目进行贡献！如果你有任何改进建议或 bug 反馈，请按照以下步骤操作：
-
-1. **提交 Issue**：在 GitHub Issue 页面描述你的问题或建议。
-2. **提交 Pull Request**：
-   - Fork 或克隆本仓库。
-   - 创建一个新的分支进行开发：`git checkout -b feature/your-feature-name`。
-   - 提交你的更改：`git commit -m "描述你的更改"`。
-   - 推送代码：`git push origin feature/your-feature-name`。
-   - 创建 Pull Request，等待审核与合并。
+欢迎对本项目进行贡献！但是建议自己Fork后修改，我这随缘更新。
 
 ## 许可证
 
