@@ -2,6 +2,7 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> <!-- 确保 viewport 设置正确，防止缩放问题 -->
   <title>HF Space Manager</title>
   <!-- 引入 Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
@@ -53,13 +54,13 @@
       max-width: 1400px;
       margin: 0 auto;
       animation: fadeIn 0.5s ease;
-      padding: 0 20px;
+      padding: 0 15px;
     }
     .overview {
       background: var(--card-background);
       border-radius: 15px;
-      padding: 25px;
-      margin-bottom: 30px;
+      padding: 20px;
+      margin-bottom: 25px;
       border: 1px solid var(--card-border);
       transition: background 0.3s ease, border 0.3s ease;
     }
@@ -68,14 +69,14 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       color: var(--text-color);
     }
     .theme-toggle {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       font-size: 14px;
       color: var(--secondary-text);
     }
@@ -105,25 +106,28 @@
     #summary {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
-      gap: 15px;
+      gap: 12px;
     }
     #summary div {
       background: var(--metric-background);
-      padding: 15px;
+      padding: 12px;
       border-radius: 8px;
       border: 1px solid var(--metric-border);
       transition: background 0.3s ease, border 0.3s ease;
     }
     #summary div {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--secondary-text);
     }
     #summary span {
       display: block;
-      font-size: 24px;
+      font-size: 22px;
       font-weight: bold;
       margin-top: 5px;
       color: var(--text-color);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .stats-container {
       display: grid;
@@ -164,7 +168,12 @@
       padding: 15px;
       border: 1px solid var(--metric-border);
       transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease, border 0.3s ease;
-      height: auto;
+      min-height: 150px; /* 登录状态下的最小高度，适配有操作按钮的情况 */
+      display: flex;
+      flex-direction: column;
+    }
+    .server-card.not-logged-in {
+      min-height: 120px; /* 未登录状态下的最小高度，减少空白 */
     }
     .server-card:hover {
       transform: translateY(-2px);
@@ -180,12 +189,21 @@
     .server-name {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
+      flex: 1;
+      min-width: 0; /* 防止内容溢出 */
+    }
+    .server-name div {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%; /* 限制名称的最大宽度 */
     }
     .server-flag {
       width: 20px;
       height: 20px;
       border-radius: 4px;
+      flex-shrink: 0;
     }
     .metric-grid {
       display: grid;
@@ -199,6 +217,7 @@
       border-radius: 6px;
       border: 1px solid var(--metric-border);
       transition: background 0.3s ease;
+      overflow: hidden; /* 防止内容溢出 */
     }
     .metric-item:hover {
       background: var(--metric-hover);
@@ -207,10 +226,15 @@
       color: var(--label-color);
       font-size: 12px;
       margin-bottom: 3px;
+      white-space: nowrap;
     }
     .metric-value {
       font-size: 14px;
       font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%; /* 限制指标值的宽度 */
     }
     .status-dot {
       display: inline-block;
@@ -218,6 +242,7 @@
       animation: pulse 2s infinite;
       width: 10px;
       height: 10px;
+      flex-shrink: 0;
     }
     .status-online {
       background-color: #4CAF50;
@@ -271,15 +296,41 @@
       70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
       100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
     }
-    @media (max-width: 768px) {
+    @media (max-width: 600px) { /* 降低阈值，确保覆盖更多小屏幕设备如 iPhone */
       #summary {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* 小屏幕单列显示 */
+        gap: 10px;
+      }
+      #summary div {
+        padding: 10px;
+      }
+      #summary span {
+        font-size: 20px; /* 小屏幕字体略小 */
       }
       .user-servers {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important; /* 小屏幕强制单列显示实例卡片，使用 !important 提高优先级 */
       }
       .metric-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, 1fr); /* 小屏幕指标网格改为2列 */
+        gap: 8px;
+      }
+      .metric-item {
+        padding: 6px;
+      }
+      .metric-value {
+        font-size: 13px; /* 小屏幕字体略小 */
+      }
+      .server-header {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px; /* 小屏幕避免标题和按钮过于紧密 */
+      }
+      .container {
+        padding: 0 10px; /* 小屏幕减少整体边距 */
+      }
+      .overview {
+        padding: 15px;
+        margin-bottom: 20px;
       }
     }
     .login-overlay, .confirm-overlay, .loading-overlay {
@@ -352,7 +403,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
     .auth-buttons {
       display: flex;
@@ -377,10 +428,10 @@
       border: 1px solid var(--card-border);
       border-radius: 10px;
       padding: 15px;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
       display: flex;
       flex-wrap: wrap;
-      gap: 20px;
+      gap: 15px;
       align-items: center;
       transition: background 0.3s ease, border 0.3s ease;
     }
@@ -390,7 +441,7 @@
       gap: 10px;
       font-size: 14px;
       color: var(--text-color);
-      min-width: 220px; /* 确保控件有足够的宽度 */
+      min-width: 200px; /* 确保控件有足够的宽度 */
     }
     .filter-sort-group label {
       white-space: nowrap;
@@ -448,12 +499,13 @@
       height: 16px;
       fill: currentColor;
     }
-    @media (max-width: 768px) {
+    @media (max-width: 600px) {
       .filter-sort-group {
         min-width: 100%; /* 小屏时控件占满一行 */
       }
       .filter-sort-panel {
-        gap: 15px; /* 小屏时减少间距 */
+        gap: 12px; /* 小屏时减少间距 */
+        padding: 12px;
       }
     }
     /* 图表相关样式 */
@@ -477,6 +529,7 @@
       font-size: 13px;
       transition: background 0.2s ease;
       margin-left: auto;
+      white-space: nowrap;
     }
     .chart-toggle-button:hover {
       background: var(--action-button-hover);
@@ -487,6 +540,11 @@
     canvas {
       width: 100% !important;
       height: auto !important;
+    }
+    @media (max-width: 600px) {
+      .chart-container {
+        height: 250px; /* 小屏幕图表高度略减 */
+      }
     }
   </style>
 </head>
@@ -786,6 +844,12 @@
         const buttons = card.querySelector('.action-buttons');
         if (buttons) {
           buttons.style.display = loggedIn ? 'flex' : 'none';
+        }
+        // 动态添加或去除 not-logged-in 类以调整卡片高度
+        if (loggedIn) {
+          card.classList.remove('not-logged-in');
+        } else {
+          card.classList.add('not-logged-in');
         }
         // 确保图表切换按钮总是可见，不管是否登录
         const chartToggleButton = card.querySelector('.chart-toggle-button');
@@ -1129,6 +1193,9 @@
         card = document.createElement('div');
         card.id = cardId;
         card.className = 'server-card';
+        if (!isLoggedIn) {
+          card.classList.add('not-logged-in'); // 未登录时添加类以调整高度
+        }
         card.innerHTML = `
           <div class="server-header">
             <div class="server-name">
