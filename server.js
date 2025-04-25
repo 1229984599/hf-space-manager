@@ -200,12 +200,12 @@ app.post('/api/proxy/restart/:repoId(*)', authenticateToken, async (req, res) =>
     console.log(`尝试重启 Space: ${repoId}`);
     const spaces = spaceCache.getAll();
     const space = spaces.find(s => s.repo_id === repoId);
-    if (!space || !space.token) {
+    if (!space || !userTokenMapping[space.username]) {
       console.error(`Space ${repoId} 未找到或无 Token 配置`);
       return res.status(404).json({ error: 'Space 未找到或无 Token 配置' });
     }
 
-    const headers = { 'Authorization': `Bearer ${space.token}`, 'Content-Type': 'application/json' };
+    const headers = { 'Authorization': `Bearer ${userTokenMapping[space.username]}`, 'Content-Type': 'application/json' };
     const response = await axios.post(`https://huggingface.co/api/spaces/${repoId}/restart`, {}, { headers });
     console.log(`重启 Space ${repoId} 成功，状态码: ${response.status}`);
     res.json({ success: true, message: `Space ${repoId} 重启成功` });
@@ -227,12 +227,12 @@ app.post('/api/proxy/rebuild/:repoId(*)', authenticateToken, async (req, res) =>
     console.log(`尝试重建 Space: ${repoId}`);
     const spaces = spaceCache.getAll();
     const space = spaces.find(s => s.repo_id === repoId);
-    if (!space || !space.token) {
+    if (!space || !userTokenMapping[space.username]) {
       console.error(`Space ${repoId} 未找到或无 Token 配置`);
       return res.status(404).json({ error: 'Space 未找到或无 Token 配置' });
     }
 
-    const headers = { 'Authorization': `Bearer ${space.token}`, 'Content-Type': 'application/json' };
+    const headers = { 'Authorization': `Bearer ${userTokenMapping[space.username]}`, 'Content-Type': 'application/json' };
     // 将 factory_reboot 参数作为查询参数传递，而非请求体
     const response = await axios.post(
       `https://huggingface.co/api/spaces/${repoId}/restart?factory=true`,
@@ -358,56 +358,210 @@ app.post('/api/v1/action/:token/:spaceId(*)/rebuild', async (req, res) => {
   }
 });
 
-// 代理 HuggingFace API：获取实时监控数据（SSE）
-app.get('/api/proxy/live-metrics/:username/:instanceId', async (req, res) => {
-  try {
-    const { username, instanceId } = req.params;
+// 监控数据管理类
+class MetricsConnectionManager {
+  constructor() {
+    this.connections = new Map(); // 存储 HuggingFace API 的监控连接
+    this.clients = new Map(); // 存储前端客户端的 SSE 连接
+    this.instanceData = new Map(); // 存储每个实例的最新监控数据
+  }
+
+  // 建立到 HuggingFace API 的监控连接
+  async connectToInstance(repoId, username, token) {
+    if (this.connections.has(repoId)) {
+      return this.connections.get(repoId);
+    }
+
+    const instanceId = repoId.split('/')[1];
     const url = `https://api.hf.space/v1/${username}/${instanceId}/live-metrics/sse`;
-
-    // 检查实例状态，决定是否继续请求
-    const spaces = spaceCache.getAll();
-    const space = spaces.find(s => s.repo_id === `${username}/${instanceId}`);
-    if (!space) {
-      console.log(`实例 ${username}/${instanceId} 未找到，不尝试获取监控数据`);
-      return res.status(404).json({ error: '实例未找到，无法获取监控数据' });
-    }
-    if (space.status.toLowerCase() !== 'running') {
-      console.log(`实例 ${username}/${instanceId} 状态为 ${space.status}，不尝试获取监控数据`);
-      return res.status(400).json({ error: '实例未运行，无法获取监控数据' });
-    }
-
-    const token = userTokenMapping[username];
-    let headers = {
+    const headers = token ? {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    } : {
       'Accept': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive'
     };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+      const response = await axios({
+        method: 'get',
+        url,
+        headers,
+        responseType: 'stream',
+        timeout: 10000
+      });
+
+      const stream = response.data;
+      stream.on('data', (chunk) => {
+        const chunkStr = chunk.toString();
+        if (chunkStr.includes('event: metric')) {
+          const dataMatch = chunkStr.match(/data: (.*)/);
+          if (dataMatch && dataMatch[1]) {
+            try {
+              const metrics = JSON.parse(dataMatch[1]);
+              this.instanceData.set(repoId, metrics);
+              // 推送给所有订阅了该实例的客户端
+              this.clients.forEach((clientRes, clientId) => {
+                if (clientRes.subscribedInstances && clientRes.subscribedInstances.includes(repoId)) {
+                  clientRes.write(`event: metric\n`);
+                  clientRes.write(`data: ${JSON.stringify({ repoId, metrics })}\n\n`);
+                }
+              });
+            } catch (error) {
+              console.error(`解析监控数据失败 (${repoId}):`, error.message);
+            }
+          }
+        }
+      });
+
+      stream.on('error', (error) => {
+        console.error(`监控连接错误 (${repoId}):`, error.message);
+        this.connections.delete(repoId);
+        this.instanceData.delete(repoId);
+      });
+
+      stream.on('end', () => {
+        console.log(`监控连接结束 (${repoId})`);
+        this.connections.delete(repoId);
+        this.instanceData.delete(repoId);
+      });
+
+      this.connections.set(repoId, stream);
+      console.log(`已建立监控连接 (${repoId})`);
+      return stream;
+    } catch (error) {
+      console.error(`无法连接到监控端点 (${repoId}):`, error.message);
+      this.connections.delete(repoId);
+      return null;
     }
-
-    const response = await axios({
-      method: 'get',
-      url,
-      headers,
-      responseType: 'stream',
-      timeout: 10000
-    });
-
-    res.set({
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
-    });
-    response.data.pipe(res);
-
-    req.on('close', () => {
-      response.data.destroy();
-    });
-  } catch (error) {
-    console.error(`代理获取直播监控数据失败 (${req.params.username}/${req.params.instanceId}):`, error.message);
-    res.status(error.response?.status || 500).json({ error: '获取监控数据失败', details: error.message });
   }
+
+  // 注册前端客户端的 SSE 连接
+  registerClient(clientId, res, subscribedInstances) {
+    res.subscribedInstances = subscribedInstances || [];
+    this.clients.set(clientId, res);
+    console.log(`客户端 ${clientId} 注册，订阅实例: ${res.subscribedInstances.join(', ') || '无'}`);
+    
+    // 首次连接时，推送已缓存的最新数据
+    res.subscribedInstances.forEach(repoId => {
+      if (this.instanceData.has(repoId)) {
+        const metrics = this.instanceData.get(repoId);
+        res.write(`event: metric\n`);
+        res.write(`data: ${JSON.stringify({ repoId, metrics })}\n\n`);
+      }
+    });
+  }
+
+  // 客户端断开连接
+  unregisterClient(clientId) {
+    this.clients.delete(clientId);
+    console.log(`客户端 ${clientId} 断开连接`);
+    this.cleanupConnections();
+  }
+
+  // 更新客户端订阅的实例列表
+  updateClientSubscriptions(clientId, subscribedInstances) {
+    const clientRes = this.clients.get(clientId);
+    if (clientRes) {
+      clientRes.subscribedInstances = subscribedInstances || [];
+      console.log(`客户端 ${clientId} 更新订阅: ${clientRes.subscribedInstances.join(', ') || '无'}`);
+      // 更新后推送最新的缓存数据
+      subscribedInstances.forEach(repoId => {
+        if (this.instanceData.has(repoId)) {
+          const metrics = this.instanceData.get(repoId);
+          clientRes.write(`event: metric\n`);
+          clientRes.write(`data: ${JSON.stringify({ repoId, metrics })}\n\n`);
+        }
+      });
+    }
+    this.cleanupConnections();
+  }
+
+  // 清理未被任何客户端订阅的连接
+  cleanupConnections() {
+    const subscribedRepoIds = new Set();
+    this.clients.forEach(clientRes => {
+      clientRes.subscribedInstances.forEach(repoId => subscribedRepoIds.add(repoId));
+    });
+
+    const toRemove = [];
+    this.connections.forEach((stream, repoId) => {
+      if (!subscribedRepoIds.has(repoId)) {
+        toRemove.push(repoId);
+        stream.destroy();
+        console.log(`清理未订阅的监控连接 (${repoId})`);
+      }
+    });
+
+    toRemove.forEach(repoId => {
+      this.connections.delete(repoId);
+      this.instanceData.delete(repoId);
+    });
+  }
+}
+
+const metricsManager = new MetricsConnectionManager();
+
+// 新增统一监控数据的SSE端点
+app.get('/api/proxy/live-metrics-stream', (req, res) => {
+  // 设置 SSE 所需的响应头
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  });
+
+  // 生成唯一的客户端ID
+  const clientId = crypto.randomBytes(8).toString('hex');
+  
+  // 获取查询参数中的实例列表
+  const instancesParam = req.query.instances || '';
+  const subscribedInstances = instancesParam.split(',').filter(id => id.trim() !== '');
+
+  // 注册客户端
+  metricsManager.registerClient(clientId, res, subscribedInstances);
+
+  // 根据订阅列表建立监控连接
+  const spaces = spaceCache.getAll();
+  subscribedInstances.forEach(repoId => {
+    const space = spaces.find(s => s.repo_id === repoId);
+    if (space) {
+      const username = space.username;
+      const token = userTokenMapping[username] || '';
+      metricsManager.connectToInstance(repoId, username, token);
+    }
+  });
+
+  // 监听客户端断开连接
+  req.on('close', () => {
+    metricsManager.unregisterClient(clientId);
+    console.log(`客户端 ${clientId} 断开 SSE 连接`);
+  });
+});
+
+// 新增接口：更新客户端订阅的实例列表
+app.post('/api/proxy/update-subscriptions', (req, res) => {
+  const { clientId, instances } = req.body;
+  if (!clientId || !instances || !Array.isArray(instances)) {
+    return res.status(400).json({ error: '缺少 clientId 或 instances 参数' });
+  }
+
+  metricsManager.updateClientSubscriptions(clientId, instances);
+  // 根据新订阅列表建立监控连接
+  const spaces = spaceCache.getAll();
+  instances.forEach(repoId => {
+    const space = spaces.find(s => s.repo_id === repoId);
+    if (space) {
+      const username = space.username;
+      const token = userTokenMapping[username] || '';
+      metricsManager.connectToInstance(repoId, username, token);
+    }
+  });
+
+  res.json({ success: true, message: '订阅列表已更新' });
 });
 
 // 处理其他请求，重定向到 index.html
