@@ -131,7 +131,12 @@ app.get('/api/proxy/spaces', async (req, res) => {
   try {
     if (!spaceCache.isExpired()) {
       console.log('从缓存获取 Spaces 数据');
-      return res.json(spaceCache.getAll());
+      // 从缓存返回的数据也需要过滤掉 token 字段
+      const cachedSpaces = spaceCache.getAll().map(space => {
+        const { token, ...safeSpace } = space; // 移除 token 字段
+        return safeSpace;
+      });
+      return res.json(cachedSpaces);
     }
 
     const allSpaces = [];
@@ -160,7 +165,6 @@ app.get('/api/proxy/spaces', async (req, res) => {
               name: spaceInfo.cardData?.title || spaceInfo.id.split('/')[1],
               owner: spaceInfo.author,
               username: username,
-              token: token || '',
               url: `https://${spaceInfo.author}-${spaceInfo.id.split('/')[1]}.hf.space`,
               status: spaceRuntime.stage || 'unknown',
               last_modified: spaceInfo.lastModified || 'unknown',
