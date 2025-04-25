@@ -558,29 +558,32 @@
       color: var(--text-color);
       user-select: none;
     }
-    /* 登录弹窗关闭按钮样式 */
+    /* 登录和确认弹窗关闭按钮样式 */
     .close-button {
       position: absolute;
       top: 10px;
       right: 10px;
-      background: none;
-      border: none;
+      background: var(--metric-background);
+      border: 1px solid var(--metric-border);
+      color: var(--text-color);
+      border-radius: 6px;
       cursor: pointer;
-      transition: background 0.2s ease, transform 0.2s ease;
-      padding: 4px;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      width: 32px;
+      height: 32px;
+      transition: background 0.2s ease, transform 0.2s ease;
+      padding: 0;
     }
     .close-button:hover {
       background: var(--metric-hover);
-      transform: scale(1.1);
+      transform: scale(1.05);
     }
     .close-button svg {
-      fill: var(--text-color);
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
     }
   </style>
 </head>
@@ -661,7 +664,7 @@
   <div id="loginOverlay" class="login-overlay">
     <div class="login-box">
       <button class="close-button" onclick="hideLoginForm()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
         </svg>
       </button>
@@ -676,7 +679,7 @@
   <div id="confirmOverlay" class="confirm-overlay">
     <div class="confirm-box">
       <button class="close-button" onclick="cancelAction()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
         </svg>
       </button>
