@@ -2,7 +2,9 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>HuggingFace 实例监控面板</title>
+  <title>HF Space Manager</title>
+  <!-- 引入 Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -280,17 +282,18 @@
         grid-template-columns: 1fr 1fr;
       }
     }
-    .login-overlay, .confirm-overlay {
+    .login-overlay, .confirm-overlay, .loading-overlay {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.6);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      display: none;
     }
     .login-box, .confirm-box {
       background: var(--card-background);
@@ -355,6 +358,136 @@
       display: flex;
       gap: 10px;
     }
+    /* 加载状态指示器样式 */
+    .loader {
+      border: 5px solid var(--card-background);
+      border-top: 5px solid #4CAF50;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    /* 优化后的过滤与排序控件样式 */
+    .filter-sort-panel {
+      background: var(--card-background);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 25px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: center;
+      transition: background 0.3s ease, border 0.3s ease;
+    }
+    .filter-sort-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text-color);
+      min-width: 220px; /* 确保控件有足够的宽度 */
+    }
+    .filter-sort-group label {
+      white-space: nowrap;
+      color: var(--secondary-text);
+      font-weight: 500;
+    }
+    .filter-sort-group select {
+      flex: 1;
+      background: var(--metric-background);
+      border: 1px solid var(--metric-border);
+      color: var(--text-color);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s ease, border 0.2s ease;
+      outline: none;
+      appearance: none; /* 移除默认的下拉箭头 */
+      background-image: url("data:image/svg+xml;utf8,<svg fill='%23fff' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 36px; /* 为箭头留出空间 */
+    }
+    [data-theme="light"] .filter-sort-group select {
+      background-image: url("data:image/svg+xml;utf8,<svg fill='%23333' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+    }
+    .filter-sort-group select:hover {
+      background-color: var(--metric-hover);
+      border-color: rgba(255, 255, 255, 0.15); /* 微调 hover 时的边框 */
+    }
+    .filter-sort-group select:focus {
+      border-color: #4CAF50;
+      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+    }
+    .refresh-button {
+      background: var(--action-button-bg);
+      border: none;
+      color: var(--text-color);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s ease, transform 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 40px;
+    }
+    .refresh-button:hover {
+      background: var(--action-button-hover);
+      transform: translateY(-1px);
+    }
+    .refresh-icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+    @media (max-width: 768px) {
+      .filter-sort-group {
+        min-width: 100%; /* 小屏时控件占满一行 */
+      }
+      .filter-sort-panel {
+        gap: 15px; /* 小屏时减少间距 */
+      }
+    }
+    /* 图表相关样式 */
+    .chart-container {
+      display: none; /* 默认隐藏 */
+      margin-top: 15px;
+      background: var(--card-background);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 10px;
+      height: 300px;
+      transition: background 0.3s ease, border 0.3s ease;
+    }
+    .chart-toggle-button {
+      background: var(--action-button-bg);
+      color: var(--text-color);
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s ease;
+      margin-left: auto;
+    }
+    .chart-toggle-button:hover {
+      background: var(--action-button-hover);
+    }
+    .expanded .chart-container {
+      display: block;
+    }
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+    }
   </style>
 </head>
 <body>
@@ -394,10 +527,44 @@
         <div>总下载: <span id="totalDownload">0 B/s</span></div>
       </div>
     </div>
+    <!-- 优化后的过滤与排序面板 -->
+    <div class="filter-sort-panel">
+      <div class="filter-sort-group">
+        <label for="statusFilter">过滤状态:</label>
+        <select id="statusFilter" onchange="applyFiltersAndSort()">
+          <option value="all">全部状态</option>
+          <option value="running">运行中</option>
+          <option value="sleeping">休眠中</option>
+          <option value="stopped">已停止</option>
+        </select>
+      </div>
+      <div class="filter-sort-group">
+        <label for="userFilter">过滤用户:</label>
+        <select id="userFilter" onchange="applyFiltersAndSort()">
+          <option value="all">全部用户</option>
+        </select>
+      </div>
+      <div class="filter-sort-group">
+        <label for="sortBy">排序方式:</label>
+        <select id="sortBy" onchange="applyFiltersAndSort()">
+          <option value="name-asc">名称 (A-Z)</option>
+          <option value="name-desc">名称 (Z-A)</option>
+          <option value="status-asc">状态 (运行-停止)</option>
+          <option value="status-desc">状态 (停止-运行)</option>
+        </select>
+      </div>
+      <button class="refresh-button" onclick="refreshData()">
+        <svg class="refresh-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+        </svg>
+        刷新数据
+      </button>
+    </div>
     <div id="servers" class="stats-container">
     </div>
   </div>
-  <div id="loginOverlay" class="login-overlay" style="display: none;">
+  <!-- 登录弹窗 -->
+  <div id="loginOverlay" class="login-overlay">
     <div class="login-box">
       <h2>登录</h2>
       <input type="text" id="username" placeholder="用户名">
@@ -406,13 +573,18 @@
       <div id="loginError" class="login-error" style="display: none;"></div>
     </div>
   </div>
-  <div id="confirmOverlay" class="confirm-overlay" style="display: none;">
+  <!-- 确认弹窗 -->
+  <div id="confirmOverlay" class="confirm-overlay">
     <div class="confirm-box">
       <h2 id="confirmTitle">确认操作</h2>
       <p id="confirmMessage" style="margin-bottom: 20px; color: var(--text-color);"></p>
       <button onclick="confirmAction()">确认</button>
       <button onclick="cancelAction()">取消</button>
     </div>
+  </div>
+  <!-- 加载状态覆盖层 -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loader"></div>
   </div>
 
   <script>
@@ -455,21 +627,24 @@
     // 全局变量，表示当前是否已登录
     let isLoggedIn = false;
 
+    // 加载状态控制函数
+    function showLoading() {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
     // 登录状态管理
     function checkLoginStatus() {
       const token = localStorage.getItem('authToken');
       const loginButton = document.getElementById('loginButton');
       const logoutButton = document.getElementById('logoutButton');
 
-      // 先检查本地是否有 token，决定初始 UI 状态
       if (token) {
         console.log('本地存储中找到 token，尝试验证:', token.slice(0, 8) + '...');
-        // 先假设未登录，直到验证成功
-        loginButton.style.display = 'block';
-        logoutButton.style.display = 'none';
-        updateActionButtons(false);
-
-        // 发送请求验证 token
+        showLoading();
         return fetch('/api/verify-token', {
           method: 'POST',
           headers: {
@@ -479,6 +654,7 @@
         })
         .then(response => response.json())
         .then(data => {
+          hideLoading();
           if (data.success) {
             console.log('Token 验证成功，用户已登录');
             isLoggedIn = true;
@@ -496,6 +672,7 @@
           return data.success;
         })
         .catch(error => {
+          hideLoading();
           console.error('验证 token 失败，清除本地存储:', error);
           localStorage.removeItem('authToken');
           isLoggedIn = false;
@@ -529,7 +706,7 @@
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
       const loginError = document.getElementById('loginError');
-
+      showLoading();
       fetch('/api/login', {
         method: 'POST',
         headers: {
@@ -539,12 +716,12 @@
       })
       .then(response => response.json())
       .then(data => {
+        hideLoading();
         if (data.success) {
           console.log('登录成功，保存 token');
           localStorage.setItem('authToken', data.token);
           isLoggedIn = true;
           hideLoginForm();
-          // 手动更新 UI 状态
           document.getElementById('loginButton').style.display = 'none';
           document.getElementById('logoutButton').style.display = 'block';
           updateActionButtons(true);
@@ -555,6 +732,7 @@
         }
       })
       .catch(error => {
+        hideLoading();
         console.error('登录请求失败:', error);
         loginError.textContent = '登录请求失败，请稍后重试';
         loginError.style.display = 'block';
@@ -564,6 +742,7 @@
     function logout() {
       const token = localStorage.getItem('authToken');
       if (token) {
+        showLoading();
         fetch('/api/logout', {
           method: 'POST',
           headers: {
@@ -573,6 +752,7 @@
         })
         .then(response => response.json())
         .then(data => {
+          hideLoading();
           console.log('登出成功，清除 token');
           localStorage.removeItem('authToken');
           isLoggedIn = false;
@@ -581,6 +761,7 @@
           updateActionButtons(false);
         })
         .catch(error => {
+          hideLoading();
           console.error('登出失败，但仍清除 token:', error);
           localStorage.removeItem('authToken');
           isLoggedIn = false;
@@ -605,6 +786,11 @@
         const buttons = card.querySelector('.action-buttons');
         if (buttons) {
           buttons.style.display = loggedIn ? 'flex' : 'none';
+        }
+        // 确保图表切换按钮总是可见，不管是否登录
+        const chartToggleButton = card.querySelector('.chart-toggle-button');
+        if (chartToggleButton) {
+          chartToggleButton.style.display = 'inline-block';
         }
       });
     }
@@ -646,12 +832,24 @@
 
     async function getUsernames() {
       try {
+        showLoading();
         const response = await fetch('/api/config');
         const config = await response.json();
+        hideLoading();
         const usernamesList = config.usernames ? config.usernames.split(',').map(name => name.trim()).filter(name => name) : [];
         document.getElementById('totalUsers').textContent = usernamesList.length;
+        // 更新用户过滤下拉菜单
+        const userFilter = document.getElementById('userFilter');
+        userFilter.innerHTML = '<option value="all">全部用户</option>';
+        usernamesList.forEach(username => {
+          const option = document.createElement('option');
+          option.value = username;
+          option.textContent = username;
+          userFilter.appendChild(option);
+        });
         return usernamesList;
       } catch (error) {
+        hideLoading();
         console.error('Failed to fetch usernames:', error);
         document.getElementById('totalUsers').textContent = 0;
         return [];
@@ -660,10 +858,13 @@
 
     async function fetchInstances() {
       try {
+        showLoading();
         const response = await fetch('/api/proxy/spaces');
         const instances = await response.json();
+        hideLoading();
         return instances;
       } catch (error) {
+        hideLoading();
         console.error("获取实例列表失败：", error);
         return [];
       }
@@ -718,44 +919,210 @@
     const metricsManager = new MetricsManager();
     const instanceMap = new Map();
     const serverStatus = new Map();
+    let allInstances = []; // 存储所有实例数据，用于过滤和排序
+    const chartInstances = new Map(); // 存储每个实例的图表实例
 
     async function initialize() {
       await getUsernames();
       const instances = await fetchInstances();
+      allInstances = instances;
+      renderInstances(allInstances);
       instances.forEach(instance => {
-        renderInstanceCard(instance);
         if (instance.status.toLowerCase() === 'running') {
           metricsManager.connect(instance.repo_id, instance.owner);
         }
       });
       updateSummary();
-      // 初始化完成后再次确保按钮状态正确
       updateActionButtons(isLoggedIn);
     }
 
-    function renderInstanceCard(instance) {
-      const instanceId = instance.repo_id;
-      instanceMap.set(instanceId, instance);
+    // 手动刷新数据函数
+    async function refreshData() {
+      metricsManager.disconnectAll();
+      // 销毁所有图表实例
+      chartInstances.forEach(chart => {
+        if (chart) {
+          chart.destroy();
+        }
+      });
+      chartInstances.clear();
+      await initialize();
+      applyFiltersAndSort(); // 确保刷新后重新应用过滤和排序
+    }
 
-      let userGroup = document.getElementById(`user-${instance.owner}`);
-      if (!userGroup) {
-        userGroup = document.createElement('details');
+    function renderInstances(instances) {
+      const serversContainer = document.getElementById('servers');
+      serversContainer.innerHTML = ''; // 清空现有内容
+      const userGroups = {};
+
+      // 按用户分组
+      instances.forEach(instance => {
+        if (!userGroups[instance.owner]) {
+          userGroups[instance.owner] = [];
+        }
+        userGroups[instance.owner].push(instance);
+      });
+
+      // 渲染每个用户组
+      Object.keys(userGroups).forEach(owner => {
+        let userGroup = document.createElement('details');
         userGroup.className = 'user-group';
-        userGroup.id = `user-${instance.owner}`;
+        userGroup.id = `user-${owner}`;
         userGroup.setAttribute('open', '');
         
         const summary = document.createElement('summary');
-        summary.textContent = `用户: ${instance.owner}`;
+        summary.textContent = `用户: ${owner}`;
         userGroup.appendChild(summary);
         
         const userServers = document.createElement('div');
         userServers.className = 'user-servers';
         userGroup.appendChild(userServers);
         
-        document.getElementById('servers').appendChild(userGroup);
+        serversContainer.appendChild(userGroup);
+
+        // 渲染该用户下的实例
+        userGroups[owner].forEach(instance => {
+          renderInstanceCard(instance, userServers);
+        });
+      });
+    }
+
+    // 图表配置函数
+    function createChart(instanceId) {
+      const canvasId = `chart-${instanceId}`;
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return null;
+
+      // 根据当前主题设置图表样式
+      const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+      const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+      const textColor = isDarkMode ? '#fff' : '#333';
+
+      const ctx = canvas.getContext('2d');
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: Array(30).fill(''), // 初始为空标签，最多30个数据点
+          datasets: [
+            {
+              label: 'CPU 使用率 (%)',
+              data: [],
+              borderColor: '#4CAF50', // 绿色
+              backgroundColor: 'rgba(76, 175, 80, 0.2)',
+              tension: 0.4,
+              fill: true,
+            },
+            {
+              label: '内存使用率 (%)',
+              data: [],
+              borderColor: '#2196F3', // 蓝色
+              backgroundColor: 'rgba(33, 150, 243, 0.2)',
+              tension: 0.4,
+              fill: true,
+            },
+            {
+              label: '上传速度 (KB/s)',
+              data: [],
+              borderColor: '#F44336', // 红色
+              backgroundColor: 'rgba(244, 67, 54, 0.2)',
+              tension: 0.4,
+              fill: true,
+            },
+            {
+              label: '下载速度 (KB/s)',
+              data: [],
+              borderColor: '#FF9800', // 橙色
+              backgroundColor: 'rgba(255, 152, 0, 0.2)',
+              tension: 0.4,
+              fill: true,
+            },
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: textColor,
+                font: { size: 12 }
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: gridColor },
+              ticks: {
+                color: textColor,
+                font: { size: 11 }
+              }
+            },
+            x: {
+              grid: { color: gridColor },
+              ticks: {
+                color: textColor,
+                font: { size: 11 },
+                maxRotation: 0,
+                minRotation: 0,
+                autoSkip: true,
+                autoSkipPadding: 10
+              }
+            }
+          },
+          elements: {
+            point: {
+              radius: 0, // 隐藏数据点
+              hitRadius: 5 // 确保悬停仍有效
+            }
+          },
+          animation: false // 关闭动画，提升性能
+        }
+      });
+      chartInstances.set(instanceId, chart);
+      return chart;
+    }
+
+    // 更新图表数据
+    function updateChart(instanceId, data) {
+      let chart = chartInstances.get(instanceId);
+      if (!chart) {
+        chart = createChart(instanceId);
+        if (!chart) return; // 如果图表未创建成功，直接返回
       }
-      
-      const userServers = userGroup.querySelector('.user-servers');
+
+      // 获取当前数据集
+      const cpuData = chart.data.datasets[0].data;
+      const memoryData = chart.data.datasets[1].data;
+      const uploadData = chart.data.datasets[2].data;
+      const downloadData = chart.data.datasets[3].data;
+
+      // 追加新数据
+      cpuData.push(data.cpu_usage_pct);
+      memoryData.push(((data.memory_used_bytes / data.memory_total_bytes) * 100).toFixed(2));
+      uploadData.push((data.tx_bps / 1024).toFixed(2)); // 转换为 KB/s
+      downloadData.push((data.rx_bps / 1024).toFixed(2)); // 转换为 KB/s
+
+      // 限制数据点数量为 30 个
+      if (cpuData.length > 30) {
+        cpuData.shift();
+        memoryData.shift();
+        uploadData.shift();
+        downloadData.shift();
+      }
+
+      // 更新图表
+      chart.update();
+    }
+
+    function renderInstanceCard(instance, container) {
+      const instanceId = instance.repo_id;
+      instanceMap.set(instanceId, instance);
+
       const cardId = `instance-${instanceId}`;
       let card = document.getElementById(cardId);
       if (!card) {
@@ -771,6 +1138,7 @@
               </svg>
               <div>${instance.name} (${instance.repo_id})</div>
             </div>
+            <button class="chart-toggle-button" onclick="toggleChart('${instanceId}')">查看图表</button>
           </div>
           <div class="metric-grid">
             <div class="metric-item">
@@ -798,8 +1166,11 @@
             <button class="action-button" onclick="showConfirmDialog('restart', '${instance.repo_id}', '确认重启', '您确定要重启实例 ${instance.name} (${instance.repo_id}) 吗？')">重启</button>
             <button class="action-button" onclick="showConfirmDialog('rebuild', '${instance.repo_id}', '确认重建', '您确定要重建实例 ${instance.name} (${instance.repo_id}) 吗？')">重建</button>
           </div>
+          <div class="chart-container" id="chart-container-${instanceId}">
+            <canvas id="chart-${instanceId}"></canvas>
+          </div>
         `;
-        userServers.appendChild(card);
+        container.appendChild(card);
       }
       const statusDot = card.querySelector('.status-dot');
       const initialStatus = instance.status.toLowerCase();
@@ -813,14 +1184,34 @@
       serverStatus.set(instanceId, { lastSeen: Date.now(), isOnline: initialStatus === 'running', isSleep: initialStatus === 'sleeping', data: null, status: instance.status });
     }
 
+    // 切换图表显示/隐藏
+    function toggleChart(instanceId) {
+      const card = document.getElementById(`instance-${instanceId}`);
+      const chartContainer = document.getElementById(`chart-container-${instanceId}`);
+      const toggleButton = card.querySelector('.chart-toggle-button');
+      if (!card || !chartContainer) return;
+
+      if (card.classList.contains('expanded')) {
+        card.classList.remove('expanded');
+        toggleButton.textContent = '查看图表';
+      } else {
+        card.classList.add('expanded');
+        toggleButton.textContent = '收起图表';
+        // 如果图表未初始化，则创建
+        if (!chartInstances.has(instanceId)) {
+          createChart(instanceId);
+        }
+      }
+    }
+
     function updateServerCard(data, instanceId, isSleep = false) {
       const cardId = `instance-${instanceId}`;
       let card = document.getElementById(cardId);
       const instance = instanceMap.get(instanceId);
       
       if (!card && instance) {
-        renderInstanceCard(instance);
-        card = document.getElementById(cardId);
+        // 如果卡片不存在，但实例存在，说明可能被过滤掉了，不渲染
+        return;
       }
 
       if (card) {
@@ -836,6 +1227,8 @@
           statusDot.className = 'status-dot status-online';
           isOnline = true;
           isSleep = false;
+          // 更新图表数据
+          updateChart(instanceId, data);
         } else {
           const currentStatus = instance?.status.toLowerCase() || 'unknown';
           if (currentStatus === 'running') {
@@ -871,6 +1264,7 @@
           showLoginForm();
           return;
         }
+        showLoading();
         const encodedRepoId = encodeURIComponent(repoId);
         const response = await fetch(`/api/proxy/restart/${encodedRepoId}`, {
           method: 'POST',
@@ -879,8 +1273,11 @@
           }
         });
         const result = await response.json();
+        hideLoading();
         if (result.success) {
           alert(`重启成功: ${repoId}`);
+          // 操作成功后立即刷新数据
+          refreshData();
         } else {
           if (response.status === 401) {
             alert('登录已过期，请重新登录');
@@ -896,6 +1293,7 @@
           }
         }
       } catch (error) {
+        hideLoading();
         console.error(`重启失败 (${repoId}):`, error);
         alert(`重启失败: ${error.message}`);
       }
@@ -909,6 +1307,7 @@
           showLoginForm();
           return;
         }
+        showLoading();
         const encodedRepoId = encodeURIComponent(repoId);
         const response = await fetch(`/api/proxy/rebuild/${encodedRepoId}`, {
           method: 'POST',
@@ -917,8 +1316,11 @@
           }
         });
         const result = await response.json();
+        hideLoading();
         if (result.success) {
           alert(`重建成功: ${repoId}`);
+          // 操作成功后立即刷新数据
+          refreshData();
         } else {
           if (response.status === 401) {
             alert('登录已过期，请重新登录');
@@ -934,6 +1336,7 @@
           }
         }
       } catch (error) {
+        hideLoading();
         console.error(`重建失败 (${repoId}):`, error);
         alert(`重建失败: ${error.message}`);
       }
@@ -979,6 +1382,58 @@
       metricsManager.disconnectAll();
       await initialize();
     }, 300000);
+
+    // 应用过滤和排序
+    function applyFiltersAndSort() {
+      const statusFilter = document.getElementById('statusFilter').value;
+      const userFilter = document.getElementById('userFilter').value;
+      const sortBy = document.getElementById('sortBy').value;
+
+      // 过滤实例
+      let filteredInstances = allInstances;
+      if (statusFilter !== 'all') {
+        filteredInstances = filteredInstances.filter(instance => instance.status.toLowerCase() === statusFilter);
+      }
+      if (userFilter !== 'all') {
+        filteredInstances = filteredInstances.filter(instance => instance.owner === userFilter);
+      }
+
+      // 排序实例
+      filteredInstances.sort((a, b) => {
+        if (sortBy === 'name-asc') {
+          return a.name.localeCompare(b.name);
+        } else if (sortBy === 'name-desc') {
+          return b.name.localeCompare(a.name);
+        } else if (sortBy === 'status-asc') {
+          const statusOrder = { 'running': 0, 'sleeping': 1, 'stopped': 2 };
+          return statusOrder[a.status.toLowerCase()] - statusOrder[b.status.toLowerCase()];
+        } else if (sortBy === 'status-desc') {
+          const statusOrder = { 'running': 2, 'sleeping': 1, 'stopped': 0 };
+          return statusOrder[a.status.toLowerCase()] - statusOrder[b.status.toLowerCase()];
+        }
+        return 0;
+      });
+
+      // 重新渲染过滤和排序后的实例
+      instanceMap.clear();
+      serverStatus.clear();
+      metricsManager.disconnectAll();
+      // 销毁现有图表实例
+      chartInstances.forEach(chart => {
+        if (chart) {
+          chart.destroy();
+        }
+      });
+      chartInstances.clear();
+      renderInstances(filteredInstances);
+      filteredInstances.forEach(instance => {
+        if (instance.status.toLowerCase() === 'running') {
+          metricsManager.connect(instance.repo_id, instance.owner);
+        }
+      });
+      updateSummary();
+      updateActionButtons(isLoggedIn);
+    }
   </script>
 </body>
 </html>
