@@ -353,6 +353,7 @@
       border: 1px solid var(--card-border);
       width: 300px;
       text-align: center;
+      position: relative; /* 确保关闭按钮可以相对定位 */
     }
     .login-box h2, .confirm-box h2 {
       margin-bottom: 20px;
@@ -557,6 +558,28 @@
       color: var(--text-color);
       user-select: none;
     }
+    /* 登录弹窗关闭按钮样式 */
+    .close-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--text-color);
+      font-size: 20px;
+      cursor: pointer;
+      transition: color 0.2s ease, transform 0.2s ease;
+      padding: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .close-button:hover {
+      color: var(--secondary-text);
+      transform: scale(1.1);
+    }
   </style>
 </head>
 <body>
@@ -635,6 +658,7 @@
   <!-- 登录弹窗 -->
   <div id="loginOverlay" class="login-overlay">
     <div class="login-box">
+      <button class="close-button" onclick="hideLoginForm()">×</button>
       <h2>登录</h2>
       <input type="text" id="username" placeholder="用户名">
       <input type="password" id="password" placeholder="密码">
@@ -645,6 +669,7 @@
   <!-- 确认弹窗 -->
   <div id="confirmOverlay" class="confirm-overlay">
     <div class="confirm-box">
+      <button class="close-button" onclick="cancelAction()">×</button>
       <h2 id="confirmTitle">确认操作</h2>
       <p id="confirmMessage" style="margin-bottom: 20px; color: var(--text-color);"></p>
       <button onclick="confirmAction()">确认</button>
