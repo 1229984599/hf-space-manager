@@ -4,7 +4,12 @@
 
 一个现代化、美观的监控面板，用于监控和管理 HuggingFace Spaces 实例。通过实时数据展示、状态监控以及操作控制（如重启和重建），帮助用户高效管理自己的 HuggingFace 实例。
 
-![界面预览](https://via.placeholder.com/800x400?text=界面预览图片待上传)
+## 未登录状态下只能查看无操作权限
+![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/未登录.png?raw=true)
+## 登录状态下支持操作
+![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/已登录.png?raw=true)
+## 支持夜间模式
+![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/夜间模式.png?raw=true)
 
 ## 功能特性
 
