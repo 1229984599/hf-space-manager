@@ -797,6 +797,7 @@
           document.getElementById('loginButton').style.display = 'none';
           document.getElementById('logoutButton').style.display = 'block';
           updateActionButtons(true);
+          refreshData(); // 登录成功后刷新数据以显示所有实例包括 private
         } else {
           console.log('登录失败:', data.message);
           loginError.textContent = data.message || '登录失败';
@@ -831,6 +832,7 @@
           document.getElementById('loginButton').style.display = 'block';
           document.getElementById('logoutButton').style.display = 'none';
           updateActionButtons(false);
+          refreshData(); // 登出后刷新数据以隐藏 private 实例
         })
         .catch(error => {
           hideLoading();
@@ -840,6 +842,7 @@
           document.getElementById('loginButton').style.display = 'block';
           document.getElementById('logoutButton').style.display = 'none';
           updateActionButtons(false);
+          refreshData(); // 登出后刷新数据以隐藏 private 实例
         });
       } else {
         console.log('本地无 token，直接设置为未登录');
@@ -847,6 +850,7 @@
         document.getElementById('loginButton').style.display = 'block';
         document.getElementById('logoutButton').style.display = 'none';
         updateActionButtons(false);
+        refreshData(); // 登出后刷新数据以隐藏 private 实例
       }
     }
 
@@ -878,7 +882,7 @@
       console.log('页面加载完成，开始检查登录状态');
       await checkLoginStatus();
       console.log('登录状态检查完成，初始化数据');
-      initialize();
+      await initialize();
     };
 
     // 二次确认弹窗逻辑
@@ -911,7 +915,13 @@
     async function getUsernames() {
       try {
         showLoading();
-        const response = await fetch('/api/config');
+        const token = localStorage.getItem('authToken');
+        const headers = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+          console.log('getUsernames 请求中附加 Token:', token.slice(0, 8) + '...');
+        }
+        const response = await fetch('/api/config', { headers });
         const config = await response.json();
         hideLoading();
         const usernamesList = config.usernames ? config.usernames.split(',').map(name => name.trim()).filter(name => name) : [];
@@ -937,13 +947,26 @@
     async function fetchInstances() {
       try {
         showLoading();
-        const response = await fetch('/api/proxy/spaces');
+        const token = localStorage.getItem('authToken');
+        const headers = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+          console.log('fetchInstances 请求中附加 Token:', token.slice(0, 8) + '...');
+        } else {
+          console.log('无可用 Token，未附加 Authorization 头');
+        }
+        const response = await fetch('/api/proxy/spaces', { headers });
         const instances = await response.json();
+        console.log('从后端获取的实例列表:', instances);
         hideLoading();
+        if (instances.length === 0) {
+          alert('未获取到实例数据，可能是网络问题或数据暂不可用。');
+        }
         return instances;
       } catch (error) {
         hideLoading();
         console.error("获取实例列表失败：", error);
+        alert('获取实例列表失败，请稍后重试。');
         return [];
       }
     }
@@ -962,7 +985,10 @@
 
         this.subscribedInstances = new Set(subscribedInstances);
         const instancesParam = Array.from(this.subscribedInstances).join(',');
-        const url = `/api/proxy/live-metrics-stream?instances=${encodeURIComponent(instancesParam)}`;
+        const token = localStorage.getItem('authToken');
+        // 由于 EventSource 不支持直接设置 Authorization 头，这里通过查询参数传递 token
+        const url = `/api/proxy/live-metrics-stream?instances=${encodeURIComponent(instancesParam)}&token=${encodeURIComponent(token || '')}`;
+        console.log('SSE 连接 URL:', url.split('&token=')[0] + (token ? '&token=... (隐藏)' : '&token=空'));
         this.eventSource = new EventSource(url);
 
         this.eventSource.addEventListener("metric", (event) => {
