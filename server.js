@@ -31,6 +31,10 @@ if (hfUserConfig) {
 const ADMIN_USERNAME = process.env.USER_NAME || 'admin';
 const ADMIN_PASSWORD = process.env.USER_PASSWORD || 'password';
 
+// 从环境变量获取是否在未登录时展示 private 实例的配置，默认值为 false
+const SHOW_PRIVATE = process.env.SHOW_PRIVATE === 'true';
+console.log(`SHOW_PRIVATE 配置: ${SHOW_PRIVATE ? '未登录时展示 private 实例' : '未登录时隐藏 private 实例'}`);
+
 // 存储会话 token 的简单内存数据库（生产环境中应使用数据库或 Redis）
 const sessions = new Map();
 const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24小时超时
@@ -55,9 +59,48 @@ class SpaceCache {
     if (!this.lastUpdate) return true;
     return (Date.now() - this.lastUpdate) > (expireMinutes * 60 * 1000);
   }
+
+  invalidate() {
+    this.lastUpdate = null;
+  }
 }
 
 const spaceCache = new SpaceCache();
+
+// 用于获取 Spaces 数据的函数，带有重试机制
+async function fetchSpacesWithRetry(username, token, maxRetries = 3, retryDelay = 2000) {
+  let retries = 0;
+  while (retries < maxRetries) {
+    try {
+      // 仅在 token 存在时添加 Authorization 头
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await axios.get(`https://huggingface.co/api/spaces?author=${username}`, {
+        headers,
+        timeout: 10000 // 设置 10 秒超时
+      });
+      const spaces = response.data;
+      console.log(`获取到 ${spaces.length} 个 Spaces for ${username} (尝试 ${retries + 1}/${maxRetries})，使用 ${token ? 'Token 认证' : '无认证'}`);
+      return spaces;
+    } catch (error) {
+      retries++;
+      let errorDetail = error.message;
+      if (error.response) {
+        errorDetail += `, HTTP Status: ${error.response.status}`;
+      } else if (error.request) {
+        errorDetail += ', No response received (possible network issue)';
+      }
+      console.error(`获取 Spaces 列表失败 for ${username} (尝试 ${retries}/${maxRetries}): ${errorDetail}，使用 ${token ? 'Token 认证' : '无认证'}`);
+      if (retries < maxRetries) {
+        console.log(`等待 ${retryDelay/1000} 秒后重试...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      } else {
+        console.error(`达到最大重试次数 (${maxRetries})，放弃重试 for ${username}`);
+        return [];
+      }
+    }
+  }
+  return [];
+}
 
 // 提供静态文件（前端文件）
 app.use(express.static(path.join(__dirname, 'public')));
@@ -129,64 +172,107 @@ const authenticateToken = (req, res, next) => {
 // 获取所有 spaces 列表（包括私有）
 app.get('/api/proxy/spaces', async (req, res) => {
   try {
-    if (!spaceCache.isExpired()) {
-      console.log('从缓存获取 Spaces 数据');
-      // 从缓存返回的数据也需要过滤掉 token 字段
-      const cachedSpaces = spaceCache.getAll().map(space => {
-        const { token, ...safeSpace } = space; // 移除 token 字段
+    // 检查是否登录
+    let isAuthenticated = false;
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const session = sessions.get(token);
+      if (session && session.expiresAt > Date.now()) {
+        isAuthenticated = true;
+        console.log(`用户已登录，Token: ${token.slice(0, 8)}...`);
+      } else {
+        if (session) {
+          sessions.delete(token); // 删除过期的 token
+          console.log(`Token ${token.slice(0, 8)}... 已过期，拒绝访问`);
+        }
+        console.log('用户认证失败，无有效 Token');
+      }
+    } else {
+      console.log('用户未提供认证令牌');
+    }
+
+    // 如果缓存为空或已过期，强制重新获取数据
+    const cachedSpaces = spaceCache.getAll();
+    if (cachedSpaces.length === 0 || spaceCache.isExpired()) {
+      console.log(cachedSpaces.length === 0 ? '缓存为空，强制重新获取数据' : '缓存已过期，重新获取数据');
+      const allSpaces = [];
+      for (const username of usernames) {
+        const token = userTokenMapping[username];
+        if (!token) {
+          console.warn(`用户 ${username} 没有配置 API Token，将尝试无认证访问公开数据`);
+        }
+
+        try {
+          const spaces = await fetchSpacesWithRetry(username, token);
+          for (const space of spaces) {
+            try {
+              // 仅在 token 存在时添加 Authorization 头
+              const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+              const spaceInfoResponse = await axios.get(`https://huggingface.co/api/spaces/${space.id}`, { headers });
+              const spaceInfo = spaceInfoResponse.data;
+              const spaceRuntime = spaceInfo.runtime || {};
+
+              allSpaces.push({
+                repo_id: spaceInfo.id,
+                name: spaceInfo.cardData?.title || spaceInfo.id.split('/')[1],
+                owner: spaceInfo.author,
+                username: username,
+                url: `https://${spaceInfo.author}-${spaceInfo.id.split('/')[1]}.hf.space`,
+                status: spaceRuntime.stage || 'unknown',
+                last_modified: spaceInfo.lastModified || 'unknown',
+                created_at: spaceInfo.createdAt || 'unknown',
+                sdk: spaceInfo.sdk || 'unknown',
+                tags: spaceInfo.tags || [],
+                private: spaceInfo.private || false,
+                app_port: spaceInfo.cardData?.app_port || 'unknown'
+              });
+            } catch (error) {
+              console.error(`处理 Space ${space.id} 失败:`, error.message, `使用 ${token ? 'Token 认证' : '无认证'}`);
+            }
+          }
+        } catch (error) {
+          console.error(`获取 Spaces 列表失败 for ${username}:`, error.message, `使用 ${token ? 'Token 认证' : '无认证'}`);
+        }
+      }
+
+      allSpaces.sort((a, b) => a.name.localeCompare(b.name));
+      spaceCache.updateAll(allSpaces);
+      console.log(`总共获取到 ${allSpaces.length} 个 Spaces`);
+
+      const safeSpaces = allSpaces.map(space => {
+        const { token, ...safeSpace } = space;
         return safeSpace;
       });
-      return res.json(cachedSpaces);
-    }
 
-    const allSpaces = [];
-    for (const username of usernames) {
-      const token = userTokenMapping[username];
-      if (!token) {
-        console.warn(`用户 ${username} 没有配置 API Token，将尝试无认证访问公开数据`);
+      if (isAuthenticated) {
+        console.log('用户已登录，返回所有实例（包括 private）');
+        res.json(safeSpaces);
+      } else if (SHOW_PRIVATE) {
+        console.log('用户未登录，但 SHOW_PRIVATE 为 true，返回所有实例');
+        res.json(safeSpaces);
+      } else {
+        console.log('用户未登录，SHOW_PRIVATE 为 false，过滤 private 实例');
+        res.json(safeSpaces.filter(space => !space.private));
       }
+    } else {
+      console.log('从缓存获取 Spaces 数据');
+      const safeSpaces = cachedSpaces.map(space => {
+        const { token, ...safeSpace } = space;
+        return safeSpace;
+      });
 
-      try {
-        // 调用 HuggingFace API 获取 Spaces 列表
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await axios.get(`https://huggingface.co/api/spaces?author=${username}`, { headers });
-        const spaces = response.data;
-        console.log(`获取到 ${spaces.length} 个 Spaces for ${username}`);
-
-        for (const space of spaces) {
-          try {
-            // 获取 Space 详细信息
-            const spaceInfoResponse = await axios.get(`https://huggingface.co/api/spaces/${space.id}`, { headers });
-            const spaceInfo = spaceInfoResponse.data;
-            const spaceRuntime = spaceInfo.runtime || {};
-
-            allSpaces.push({
-              repo_id: spaceInfo.id,
-              name: spaceInfo.cardData?.title || spaceInfo.id.split('/')[1],
-              owner: spaceInfo.author,
-              username: username,
-              url: `https://${spaceInfo.author}-${spaceInfo.id.split('/')[1]}.hf.space`,
-              status: spaceRuntime.stage || 'unknown',
-              last_modified: spaceInfo.lastModified || 'unknown',
-              created_at: spaceInfo.createdAt || 'unknown',
-              sdk: spaceInfo.sdk || 'unknown',
-              tags: spaceInfo.tags || [],
-              private: spaceInfo.private || false,
-              app_port: spaceInfo.cardData?.app_port || 'unknown'
-            });
-          } catch (error) {
-            console.error(`处理 Space ${space.id} 失败:`, error.message);
-          }
-        }
-      } catch (error) {
-        console.error(`获取 Spaces 列表失败 for ${username}:`, error.message);
+      if (isAuthenticated) {
+        console.log('用户已登录，返回所有缓存实例（包括 private）');
+        return res.json(safeSpaces);
+      } else if (SHOW_PRIVATE) {
+        console.log('用户未登录，但 SHOW_PRIVATE 为 true，返回所有缓存实例');
+        return res.json(safeSpaces);
+      } else {
+        console.log('用户未登录，SHOW_PRIVATE 为 false，过滤 private 实例');
+        return res.json(safeSpaces.filter(space => !space.private));
       }
     }
-
-    allSpaces.sort((a, b) => a.name.localeCompare(b.name));
-    spaceCache.updateAll(allSpaces);
-    console.log(`总共获取到 ${allSpaces.length} 个 Spaces`);
-    res.json(allSpaces);
   } catch (error) {
     console.error(`代理获取 spaces 列表失败:`, error.message);
     res.status(500).json({ error: '获取 spaces 列表失败', details: error.message });
@@ -374,6 +460,7 @@ class MetricsConnectionManager {
 
     const instanceId = repoId.split('/')[1];
     const url = `https://api.hf.space/v1/${username}/${instanceId}/live-metrics/sse`;
+    // 仅在 token 存在且非空时添加 Authorization 头
     const headers = token ? {
       'Authorization': `Bearer ${token}`,
       'Accept': 'text/event-stream',
@@ -430,7 +517,7 @@ class MetricsConnectionManager {
       });
 
       this.connections.set(repoId, stream);
-      console.log(`已建立监控连接 (${repoId})`);
+      console.log(`已建立监控连接 (${repoId})，使用 ${token ? 'Token 认证' : '无认证'}`);
       return stream;
     } catch (error) {
       console.error(`无法连接到监控端点 (${repoId}):`, error.message);
@@ -517,9 +604,28 @@ app.get('/api/proxy/live-metrics-stream', (req, res) => {
   // 生成唯一的客户端ID
   const clientId = crypto.randomBytes(8).toString('hex');
   
-  // 获取查询参数中的实例列表
+  // 获取查询参数中的实例列表和 token
   const instancesParam = req.query.instances || '';
+  const token = req.query.token || '';
   const subscribedInstances = instancesParam.split(',').filter(id => id.trim() !== '');
+
+  // 检查登录状态
+  let isAuthenticated = false;
+  if (token) {
+    const session = sessions.get(token);
+    if (session && session.expiresAt > Date.now()) {
+      isAuthenticated = true;
+      console.log(`SSE 用户已登录，Token: ${token.slice(0, 8)}...`);
+    } else {
+      if (session) {
+        sessions.delete(token);
+        console.log(`SSE Token ${token.slice(0, 8)}... 已过期，拒绝访问`);
+      }
+      console.log('SSE 用户认证失败，无有效 Token');
+    }
+  } else {
+    console.log('SSE 用户未提供认证令牌');
+  }
 
   // 注册客户端
   metricsManager.registerClient(clientId, res, subscribedInstances);
@@ -580,8 +686,67 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000); // 每小时清理一次
 
+// 定时刷新缓存任务
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 每 5 分钟检查一次
+async function refreshSpacesCachePeriodically() {
+  console.log('启动定时刷新缓存任务...');
+  setInterval(async () => {
+    try {
+      const cachedSpaces = spaceCache.getAll();
+      if (spaceCache.isExpired() || cachedSpaces.length === 0) {
+        console.log('定时任务：缓存已过期或为空，重新获取 Spaces 数据');
+        const allSpaces = [];
+        for (const username of usernames) {
+          const token = userTokenMapping[username];
+          if (!token) {
+            console.warn(`用户 ${username} 没有配置 API Token，将尝试无认证访问公开数据`);
+          }
+          try {
+            const spaces = await fetchSpacesWithRetry(username, token);
+            for (const space of spaces) {
+              try {
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                const spaceInfoResponse = await axios.get(`https://huggingface.co/api/spaces/${space.id}`, { headers });
+                const spaceInfo = spaceInfoResponse.data;
+                const spaceRuntime = spaceInfo.runtime || {};
+
+                allSpaces.push({
+                  repo_id: spaceInfo.id,
+                  name: spaceInfo.cardData?.title || spaceInfo.id.split('/')[1],
+                  owner: spaceInfo.author,
+                  username: username,
+                  url: `https://${spaceInfo.author}-${spaceInfo.id.split('/')[1]}.hf.space`,
+                  status: spaceRuntime.stage || 'unknown',
+                  last_modified: spaceInfo.lastModified || 'unknown',
+                  created_at: spaceInfo.createdAt || 'unknown',
+                  sdk: spaceInfo.sdk || 'unknown',
+                  tags: spaceInfo.tags || [],
+                  private: spaceInfo.private || false,
+                  app_port: spaceInfo.cardData?.app_port || 'unknown'
+                });
+              } catch (error) {
+                console.error(`处理 Space ${space.id} 失败:`, error.message);
+              }
+            }
+          } catch (error) {
+            console.error(`获取 Spaces 列表失败 for ${username}:`, error.message);
+          }
+        }
+        allSpaces.sort((a, b) => a.name.localeCompare(b.name));
+        spaceCache.updateAll(allSpaces);
+        console.log(`定时任务：总共获取到 ${allSpaces.length} 个 Spaces，缓存已更新`);
+      } else {
+        console.log('定时任务：缓存有效且不为空，无需更新');
+      }
+    } catch (error) {
+      console.error('定时任务：刷新缓存失败:', error.message);
+    }
+  }, REFRESH_INTERVAL);
+}
+
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
   console.log(`User configurations:`, usernames.map(user => `${user}: ${userTokenMapping[user] ? 'Token Configured' : 'No Token'}`).join(', ') || 'None');
   console.log(`Admin login enabled: Username=${ADMIN_USERNAME}, Password=${ADMIN_PASSWORD ? 'Configured' : 'Not Configured'}`);
+  refreshSpacesCachePeriodically(); // 启动定时任务
 });
