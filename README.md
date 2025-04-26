@@ -206,6 +206,7 @@
 | `USER_NAME`      | 监控面板登录用户名                       | `admin`      | 否   |
 | `USER_PASSWORD`  | 监控面板登录密码                         | `password`   | 否   |
 | `PORT`           | 应用运行端口                             | `8080`       | 否   |
+| `SHOW_PRIVATE`   | 未登录下是否显示Private实例                | `false`       | 否   |
 
 **注意**：为安全起见，建议在生产环境中自定义 `USER_NAME` 和 `USER_PASSWORD`，避免使用默认值。
 
