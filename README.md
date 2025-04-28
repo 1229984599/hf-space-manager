@@ -9,13 +9,19 @@
 - **实时监控**：显示 HuggingFace Spaces 实例的运行状态、CPU 使用率、内存占用、上传和下载速率等关键指标。
 - **多用户支持**：支持监控多个 HuggingFace 用户的实例，并按用户分组显示。
 - **操作控制**：支持对实例进行重启和重建操作（需要登录权限）。
-- **主题切换**：支持浅色模式和深色模式，可根据系统设置自动切换。
+- **精美主题**：赛博朋克风格主题，科技感爆棚。
 - **权限管理**：通过登录系统限制操作权限，未登录用户只能查看数据，无法执行敏感操作。
 - **Docker 部署**：提供 Docker 和 Docker Compose 支持，快速部署到任何支持 Docker 的环境。
 - **安全性**：登录凭据通过后端 API 验证，使用临时会话 token 维护登录状态。
 - **外部 API**：提供 RESTful API 接口，允许第三方应用查询实例信息和管理实例。
 
 ## 近期更新
+
+### v2.5.0（2025.04.28）
+- 修复版本号过低的 Bug，实现大跃进
+- 移除主题功能，默认为赛博科技风深色主题
+- 为实例增加查看描述、最后部署日期信息的功能
+- 优化了页面自适应屏幕展示
 
 ### v2.0.4（2025.04.27）
 - 为 Private 实例增加特殊标识，方便区分
@@ -55,8 +61,8 @@
 ![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/未登录.png?raw=true)
 ### 登录状态下支持操作
 ![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/已登录.png?raw=true)
-### 支持夜间模式
-![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/夜间模式.png?raw=true)
+### 支持展开信息、图表
+![界面预览](https://github.com/ssfun/hf-space-manager/blob/main/preview/展开信息.png?raw=true)
 
 ## 技术栈
 
