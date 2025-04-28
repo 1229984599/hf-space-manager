@@ -1,7 +1,8 @@
 name: Publish HF Space Docker Image
 
 on:
-  workflow_dispatch:  # 手动触发
+  release:
+    types: [created] # 当有新的 release 被创建时触发
 
 jobs:
   build-and-push:
@@ -11,8 +12,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # - name: Set up QEMU # 可选：如果经常构建多架构镜像，可以加上这个步骤，能提高构建速度，但目前docker/setup-buildx-action@v2已经包含了大部分需要的功能，可以先不加。
+      #   uses: docker/setup-qemu-action@v2
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+        with:
+          # 使用 buildx bake 可以更好地指定多个 tag，但为了简化，这里直接在 tags 里生成
+          driver-opts: |
+             image: moby/buildkit:v0.11.6 # 推荐指定buildkit版本，避免潜在问题
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
@@ -21,9 +29,12 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5 # 推荐使用最新版本 v5
         with:
-          context: .  # 指定构建上下文为 /onehub 目录
+          context: .  # 保持构建上下文为仓库根目录
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/hfspace:latest
+          # 同时打上 latest 和 release tag (例如：your_docker_username/hfspace:latest 和 your_docker_username/hfspace:v1.0.0)
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/hfspace:latest
+            ${{ secrets.DOCKER_USERNAME }}/hfspace:${{ github.event.release.tag_name }}
