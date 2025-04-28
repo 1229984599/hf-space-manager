@@ -2,106 +2,70 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> <!-- 确保 viewport 设置正确，防止缩放问题 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>HF Space Manager</title>
   <!-- 引入 Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <!-- 引入科技感字体 Orbitron -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap">
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     body {
-      font-family: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Orbitron', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       background: var(--background-color);
       color: var(--text-color);
       padding: 20px;
       min-height: 100vh;
-      transition: background 0.3s ease, color 0.3s ease;
+      background-image: radial-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px), radial-gradient(rgba(255, 0, 255, 0.1) 1px, transparent 1px);
+      background-size: 40px 40px;
+      background-position: 0 0, 20px 20px;
     }
     :root {
-      /* 深色模式变量（默认） */
-      --background-color: #0a0a0a;
-      --text-color: #fff;
-      --card-background: #1a1a1a;
-      --card-border: rgba(255, 255, 255, 0.1);
-      --metric-background: #141414;
-      --metric-border: rgba(255, 255, 255, 0.05);
-      --metric-hover: #202020;
-      --secondary-text: #888;
-      --label-color: #666;
-      --network-background: rgba(255, 255, 255, 0.07);
-      --action-button-bg: #3a3a3a;
-      --action-button-hover: #4a4a4a;
-    }
-    [data-theme="light"] {
-      /* 浅色模式变量 */
-      --background-color: #f5f5f5;
-      --text-color: #333;
-      --card-background: #fff;
-      --card-border: rgba(0, 0, 0, 0.1);
-      --metric-background: #f9f9f9;
-      --metric-border: rgba(0, 0, 0, 0.05);
-      --metric-hover: #eaeaea;
-      --secondary-text: #666;
-      --label-color: #999;
-      --network-background: rgba(0, 0, 0, 0.07);
-      --action-button-bg: #e0e0e0;
-      --action-button-hover: #d0d0d0;
+      /* 深色模式变量（默认且唯一） */
+      --background-color: #0A0A1E;
+      --text-color: #E0E0FF;
+      --secondary-text: #A0A0CC;
+      --card-background: rgba(20, 20, 40, 0.7);
+      --card-border: rgba(0, 212, 255, 0.3);
+      --metric-background: rgba(30, 30, 50, 0.6);
+      --metric-border: rgba(0, 212, 255, 0.2);
+      --metric-hover: rgba(40, 40, 70, 0.8);
+      --label-color: #A0A0CC;
+      --action-button-bg: rgba(0, 212, 255, 0.2);
+      --action-button-hover: rgba(0, 212, 255, 0.4);
+      --accent-color: #00D4FF;
+      --neon-pink: #FF00FF;
+      --neon-green: #00FFAA;
     }
     .container {
       max-width: 1400px;
       margin: 0 auto;
-      animation: fadeIn 0.5s ease;
       padding: 0 15px;
     }
     .overview {
       background: var(--card-background);
-      border-radius: 15px;
+      border-radius: 8px;
       padding: 20px;
       margin-bottom: 25px;
       border: 1px solid var(--card-border);
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.3), inset 0 0 2px rgba(0, 212, 255, 0.5);
       transition: background 0.3s ease, border 0.3s ease;
     }
     .overview-title {
       font-size: 18px;
+      font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-      color: var(--text-color);
-    }
-    .theme-toggle {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-      font-size: 14px;
-      color: var(--secondary-text);
-    }
-    .theme-toggle button {
-      background: var(--metric-background);
-      border: 1px solid var(--metric-border);
-      color: var(--text-color);
-      padding: 6px;
-      border-radius: 6px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      transition: background 0.2s ease, transform 0.2s ease;
-    }
-    .theme-toggle button:hover {
-      background: var(--metric-hover);
-      transform: scale(1.05);
-    }
-    .theme-toggle svg {
-      width: 18px;
-      height: 18px;
-      fill: var(--text-color);
+      gap: 8px;
+      margin-bottom: 16px;
+      color: var(--accent-color);
+      text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
     }
     #summary {
       display: grid;
@@ -110,21 +74,24 @@
     }
     #summary div {
       background: var(--metric-background);
-      padding: 12px;
-      border-radius: 8px;
+      padding: 14px;
+      border-radius: 6px;
       border: 1px solid var(--metric-border);
-      transition: background 0.3s ease, border 0.3s ease;
+      transition: background 0.3s ease;
+      box-shadow: inset 0 0 3px rgba(0, 212, 255, 0.3);
     }
     #summary div {
       font-size: 13px;
+      font-weight: 500;
       color: var(--secondary-text);
     }
     #summary span {
       display: block;
       font-size: 22px;
-      font-weight: bold;
-      margin-top: 5px;
+      font-weight: 700;
+      margin-top: 6px;
       color: var(--text-color);
+      text-shadow: 0 0 3px rgba(0, 212, 255, 0.3);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -132,58 +99,74 @@
     .stats-container {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 20px;
+      gap: 24px;
       margin-top: 20px;
     }
     .user-group {
       background: var(--card-background);
-      border-radius: 10px;
+      border-radius: 8px;
       border: 1px solid var(--card-border);
       overflow: hidden;
+      box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
       transition: background 0.3s ease, border 0.3s ease;
     }
     .user-group summary {
-      padding: 15px;
-      font-weight: bold;
+      padding: 16px;
+      font-weight: 600;
       cursor: pointer;
-      color: var(--text-color);
+      color: var(--accent-color);
       background: var(--metric-background);
       transition: background 0.2s ease;
+      text-shadow: 0 0 4px rgba(0, 212, 255, 0.4);
     }
     .user-group summary:hover {
       background: var(--metric-hover);
+      box-shadow: inset 0 0 5px rgba(0, 212, 255, 0.5);
     }
     .user-group summary::-webkit-details-marker {
-      color: var(--text-color);
+      color: var(--accent-color);
     }
     .user-servers {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 15px;
-      padding: 15px;
+      gap: 16px;
+      padding: 16px;
     }
     .server-card {
       background: var(--metric-background);
-      border-radius: 8px;
-      padding: 15px;
+      border-radius: 6px;
+      padding: 16px;
       border: 1px solid var(--metric-border);
-      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease, border 0.3s ease;
-      min-height: 150px; /* 登录状态下的最小高度，适配有操作按钮的情况 */
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+      min-height: 150px;
       display: flex;
       flex-direction: column;
+      box-shadow: 0 0 5px rgba(0, 212, 255, 0.2);
+      position: relative;
+      overflow: hidden;
     }
     .server-card.not-logged-in {
-      min-height: 120px; /* 未登录状态下的最小高度，减少空白 */
+      min-height: 120px;
     }
     .server-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      background: var(--metric-hover);
+      box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
+    }
+    .server-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-color), var(--neon-pink));
+      opacity: 0.7;
     }
     .server-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       font-size: 14px;
     }
     .server-name {
@@ -191,50 +174,116 @@
       align-items: center;
       gap: 8px;
       flex: 1;
-      min-width: 0; /* 防止内容溢出 */
+      min-width: 0;
+      cursor: pointer;
+      position: relative;
+    }
+    .server-name:hover {
+      opacity: 0.8;
+    }
+    .server-name::after {
+      content: '▼';
+      font-size: 12px;
+      color: var(--accent-color);
+      margin-left: 8px;
+      transition: transform 0.3s ease;
+    }
+    .server-card.info-expanded .server-name::after {
+      transform: rotate(180deg);
     }
     .server-name div {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      max-width: 100%; /* 限制名称的最大宽度 */
+      max-width: 100%;
+      font-weight: 500;
+      color: var(--accent-color);
+      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
     }
     .server-flag {
       width: 20px;
       height: 20px;
-      border-radius: 4px;
+      border-radius: 6px;
       flex-shrink: 0;
+      filter: drop-shadow(0 0 3px rgba(0, 212, 255, 0.3));
     }
     .metric-grid {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       gap: 10px;
-      margin-top: 10px;
+      margin-top: 12px;
     }
     .metric-item {
       background: var(--card-background);
-      padding: 8px;
-      border-radius: 6px;
+      padding: 10px;
+      border-radius: 4px;
       border: 1px solid var(--metric-border);
-      transition: background 0.3s ease;
-      overflow: hidden; /* 防止内容溢出 */
+      transition: background 0.2s ease;
+      overflow: hidden;
+      box-shadow: inset 0 0 3px rgba(0, 212, 255, 0.2);
     }
     .metric-item:hover {
       background: var(--metric-hover);
+      box-shadow: inset 0 0 5px rgba(0, 212, 255, 0.4);
     }
     .metric-label {
       color: var(--label-color);
       font-size: 12px;
-      margin-bottom: 3px;
+      margin-bottom: 4px;
       white-space: nowrap;
     }
     .metric-value {
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 600;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      max-width: 100%; /* 限制指标值的宽度 */
+      max-width: 100%;
+      color: var(--text-color);
+      text-shadow: 0 0 2px rgba(0, 212, 255, 0.3);
+    }
+    /* 新增信息块样式 */
+    .info-block {
+      background: var(--card-background);
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid var(--metric-border);
+      margin-top: 12px;
+      transition: background 0.2s ease, height 0.3s ease;
+      overflow: hidden;
+      box-shadow: inset 0 0 3px rgba(0, 212, 255, 0.2);
+      display: none;
+    }
+    .server-card.info-expanded .info-block {
+      display: block;
+    }
+    .info-block:hover {
+      background: var(--metric-hover);
+      box-shadow: inset 0 0 5px rgba(0, 212, 255, 0.4);
+    }
+    .info-item {
+      margin-bottom: 6px;
+    }
+    .info-item:last-child {
+      margin-bottom: 0;
+    }
+    .info-label {
+      color: var(--label-color);
+      font-size: 12px;
+      margin-bottom: 4px;
+      white-space: nowrap;
+    }
+    .info-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-color);
+      text-shadow: 0 0 2px rgba(0, 212, 255, 0.3);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      line-clamp: 2;
     }
     .status-dot {
       display: inline-block;
@@ -245,92 +294,176 @@
       flex-shrink: 0;
     }
     .status-online {
-      background-color: #4CAF50;
-      color: #4CAF50;
+      background-color: var(--neon-green);
+      color: var(--neon-green);
+      box-shadow: 0 0 8px rgba(0, 255, 170, 0.6);
     }
     .status-offline {
-      background-color: #f44336;
-      color: #f44336;
+      background-color: #ff3b30;
+      color: #ff3b30;
+      box-shadow: 0 0 8px rgba(255, 59, 48, 0.6);
     }
     .status-sleep {
-      background-color: #ffa500;
-      color: #ffa500;
+      background-color: var(--neon-pink);
+      color: var(--neon-pink);
+      box-shadow: 0 0 8px rgba(255, 0, 255, 0.6);
       animation: none;
     }
     .action-buttons {
       display: flex;
       gap: 10px;
-      margin-top: 10px;
+      margin-top: 12px;
     }
     .action-button {
       background: var(--action-button-bg);
-      color: var(--text-color);
+      color: var(--accent-color);
       border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
+      padding: 8px 14px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 13px;
-      transition: background 0.2s ease;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
+      position: relative;
+      overflow: hidden;
     }
     .action-button:hover {
       background: var(--action-button-hover);
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    }
+    .action-button::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(0, 212, 255, 0.2) 0%, transparent 70%);
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .action-button:hover::after {
+      opacity: 1;
     }
     .network-stats {
-      background: var(--network-background);
+      background: var(--metric-background);
       border: 1px solid var(--metric-border);
       margin-top: 20px;
-      padding: 15px;
-      border-radius: 8px;
-      transition: background 0.3s ease, border 0.3s ease;
+      padding: 16px;
+      border-radius: 6px;
+      transition: background 0.3s ease;
+      box-shadow: 0 0 5px rgba(0, 212, 255, 0.2);
     }
     .network-item {
       font-size: 14px;
       color: var(--secondary-text);
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
     @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
-      70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+      0% { box-shadow: 0 0 0 0 rgba(0, 255, 170, 0.6); }
+      70% { box-shadow: 0 0 0 8px rgba(0, 255, 170, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 255, 170, 0); }
     }
-    @media (max-width: 600px) { /* 降低阈值，确保覆盖更多小屏幕设备如 iPhone */
+    @media (max-width: 900px) {
       #summary {
-        grid-template-columns: 1fr; /* 小屏幕单列显示 */
+        grid-template-columns: repeat(3, 1fr);
         gap: 10px;
       }
       #summary div {
         padding: 10px;
       }
       #summary span {
-        font-size: 20px; /* 小屏幕字体略小 */
-      }
-      .user-servers {
-        grid-template-columns: 1fr !important; /* 小屏幕强制单列显示实例卡片，使用 !important 提高优先级 */
+        font-size: 20px;
       }
       .metric-grid {
-        grid-template-columns: repeat(2, 1fr); /* 小屏幕指标网格改为2列 */
+        grid-template-columns: repeat(3, 1fr); /* 与系统概览同步，变为3列 */
+        gap: 8px;
+      }
+      .metric-item {
+        padding: 8px;
+      }
+      .metric-value {
+        font-size: 13px;
+      }
+      .info-block {
+        padding: 8px;
+      }
+      .info-value {
+        font-size: 13px;
+      }
+    }
+    @media (max-width: 600px) {
+      #summary {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      #summary div {
+        padding: 8px;
+      }
+      #summary span {
+        font-size: 18px;
+      }
+      .user-servers {
+        grid-template-columns: 1fr !important;
+      }
+      .metric-grid {
+        grid-template-columns: repeat(2, 1fr); /* 与系统概览同步，变为2列 */
         gap: 8px;
       }
       .metric-item {
         padding: 6px;
       }
       .metric-value {
-        font-size: 13px; /* 小屏幕字体略小 */
+        font-size: 13px;
       }
       .server-header {
         flex-direction: row;
         flex-wrap: wrap;
-        gap: 8px; /* 小屏幕避免标题和按钮过于紧密 */
+        gap: 8px;
       }
       .container {
-        padding: 0 10px; /* 小屏幕减少整体边距 */
+        padding: 0 10px;
       }
       .overview {
-        padding: 15px;
+        padding: 16px;
         margin-bottom: 20px;
+      }
+      .info-block {
+        padding: 6px;
+      }
+      .info-value {
+        font-size: 12px;
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+      }
+    }
+    @media (max-width: 400px) {
+      #summary {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+      }
+      #summary div {
+        padding: 6px;
+      }
+      #summary span {
+        font-size: 16px;
+      }
+      .metric-grid {
+        grid-template-columns: repeat(2, 1fr); /* 保持2列，进一步优化间距和字体 */
+        gap: 6px;
+      }
+      .metric-item {
+        padding: 5px;
+      }
+      .metric-value {
+        font-size: 12px;
+      }
+      .info-block {
+        padding: 5px;
+      }
+      .info-value {
+        font-size: 11px;
       }
     }
     .login-overlay, .confirm-overlay, .loading-overlay {
@@ -339,7 +472,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(10, 10, 30, 0.7);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -348,62 +481,99 @@
     }
     .login-box, .confirm-box {
       background: var(--card-background);
-      padding: 30px;
-      border-radius: 10px;
+      padding: 24px;
+      border-radius: 8px;
       border: 1px solid var(--card-border);
-      width: 300px;
+      width: 320px;
       text-align: center;
+      box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+      position: relative;
+    }
+    .login-box::before, .confirm-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-color), var(--neon-pink));
     }
     .login-box h2, .confirm-box h2 {
       margin-bottom: 20px;
-      color: var(--text-color);
+      color: var(--accent-color);
+      font-size: 18px;
+      font-weight: 600;
+      text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
     }
     .login-box input {
       width: 100%;
-      padding: 10px;
-      margin: 10px 0;
+      padding: 12px 16px;
+      margin: 12px 0;
       border: 1px solid var(--metric-border);
-      border-radius: 5px;
+      border-radius: 6px;
       background: var(--metric-background);
       color: var(--text-color);
+      font-size: 16px;
+      transition: border 0.2s ease, box-shadow 0.2s ease;
+    }
+    .login-box input:focus {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
+      outline: none;
     }
     .login-box button, .confirm-box button {
       width: 48%;
-      padding: 10px;
+      padding: 12px;
       background: var(--action-button-bg);
       border: none;
-      border-radius: 5px;
-      color: var(--text-color);
+      border-radius: 6px;
+      color: var(--accent-color);
       cursor: pointer;
-      transition: background 0.2s ease;
-      margin: 5px 1%;
+      font-size: 16px;
+      font-weight: 500;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+      margin: 10px 1%;
+      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
     }
     .login-box button:hover, .confirm-box button:hover {
       background: var(--action-button-hover);
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    }
+    .login-box button:last-child, .confirm-box button:last-child {
+      background: transparent;
+      color: var(--neon-pink);
+    }
+    .login-box button:last-child:hover, .confirm-box button:last-child:hover {
+      background: rgba(255, 0, 255, 0.1);
+      box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
     }
     .login-error {
-      color: #f44336;
-      margin-top: 10px;
+      color: #ff3b30;
+      margin-top: 12px;
       font-size: 14px;
+      text-shadow: 0 0 3px rgba(255, 59, 48, 0.5);
     }
     .login-button, .logout-button {
       background: var(--action-button-bg);
       border: none;
-      color: var(--text-color);
-      padding: 6px 12px;
-      border-radius: 4px;
+      color: var(--accent-color);
+      padding: 8px 16px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 13px;
-      transition: background 0.2s ease;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
     }
     .login-button:hover, .logout-button:hover {
       background: var(--action-button-hover);
+      box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
     }
     .header-container {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 15px;
+      margin-bottom: 16px;
     }
     .auth-buttons {
       display: flex;
@@ -411,12 +581,13 @@
     }
     /* 加载状态指示器样式 */
     .loader {
-      border: 5px solid var(--card-background);
-      border-top: 5px solid #4CAF50;
+      border: 5px solid transparent;
+      border-top: 5px solid var(--accent-color);
       border-radius: 50%;
       width: 50px;
       height: 50px;
       animation: spin 1s linear infinite;
+      box-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
     }
     @keyframes spin {
       0% { transform: rotate(0deg); }
@@ -426,14 +597,15 @@
     .filter-sort-panel {
       background: var(--card-background);
       border: 1px solid var(--card-border);
-      border-radius: 10px;
-      padding: 15px;
+      border-radius: 8px;
+      padding: 16px;
       margin-bottom: 20px;
       display: flex;
       flex-wrap: wrap;
-      gap: 15px;
+      gap: 16px;
       align-items: center;
-      transition: background 0.3s ease, border 0.3s ease;
+      box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+      transition: background 0.3s ease;
     }
     .filter-sort-group {
       display: flex;
@@ -441,98 +613,102 @@
       gap: 10px;
       font-size: 14px;
       color: var(--text-color);
-      min-width: 200px; /* 确保控件有足够的宽度 */
+      min-width: 200px;
     }
     .filter-sort-group label {
       white-space: nowrap;
       color: var(--secondary-text);
       font-weight: 500;
+      text-shadow: 0 0 2px rgba(0, 212, 255, 0.3);
     }
     .filter-sort-group select {
       flex: 1;
       background: var(--metric-background);
       border: 1px solid var(--metric-border);
       color: var(--text-color);
-      padding: 8px 12px;
+      padding: 10px 14px;
       border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
-      transition: background 0.2s ease, border 0.2s ease;
+      transition: background 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
       outline: none;
-      appearance: none; /* 移除默认的下拉箭头 */
-      background-image: url("data:image/svg+xml;utf8,<svg fill='%23fff' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+      appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg fill='%2300D4FF' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
       background-repeat: no-repeat;
       background-position: right 10px center;
-      padding-right: 36px; /* 为箭头留出空间 */
-    }
-    [data-theme="light"] .filter-sort-group select {
-      background-image: url("data:image/svg+xml;utf8,<svg fill='%23333' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+      padding-right: 36px;
+      text-shadow: 0 0 2px rgba(0, 212, 255, 0.3);
     }
     .filter-sort-group select:hover {
       background-color: var(--metric-hover);
-      border-color: rgba(255, 255, 255, 0.15); /* 微调 hover 时的边框 */
+      box-shadow: 0 0 6px rgba(0, 212, 255, 0.4);
     }
     .filter-sort-group select:focus {
-      border-color: #4CAF50;
-      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+      border-color: var(--accent-color);
+      box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
     }
     .refresh-button {
       background: var(--action-button-bg);
       border: none;
-      color: var(--text-color);
-      padding: 8px 16px;
+      color: var(--accent-color);
+      padding: 8px 16px; /* 与 .chart-toggle-button 一致 */
       border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
-      transition: background 0.2s ease, transform 0.2s ease;
+      font-weight: 500;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
       display: flex;
       align-items: center;
       gap: 8px;
-      height: 40px;
+      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
     }
     .refresh-button:hover {
       background: var(--action-button-hover);
-      transform: translateY(-1px);
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
     }
     .refresh-icon {
       width: 16px;
       height: 16px;
-      fill: currentColor;
+      fill: var(--accent-color);
     }
     @media (max-width: 600px) {
       .filter-sort-group {
-        min-width: 100%; /* 小屏时控件占满一行 */
+        min-width: 100%;
       }
       .filter-sort-panel {
-        gap: 12px; /* 小屏时减少间距 */
-        padding: 12px;
+        gap: 14px;
+        padding: 14px;
       }
     }
     /* 图表相关样式 */
     .chart-container {
-      display: none; /* 默认隐藏 */
-      margin-top: 15px;
+      display: none;
+      margin-top: 16px;
       background: var(--card-background);
       border: 1px solid var(--card-border);
-      border-radius: 8px;
-      padding: 10px;
+      border-radius: 6px;
+      padding: 12px;
       height: 300px;
-      transition: background 0.3s ease, border 0.3s ease;
+      transition: background 0.3s ease;
+      box-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
     }
     .chart-toggle-button {
       background: var(--action-button-bg);
-      color: var(--text-color);
+      color: var(--accent-color);
       border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
+      padding: 8px 16px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 13px;
-      transition: background 0.2s ease;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
       margin-left: auto;
       white-space: nowrap;
+      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
     }
     .chart-toggle-button:hover {
       background: var(--action-button-hover);
+      box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
     }
     .expanded .chart-container {
       display: block;
@@ -543,19 +719,8 @@
     }
     @media (max-width: 600px) {
       .chart-container {
-        height: 250px; /* 小屏幕图表高度略减 */
+        height: 250px;
       }
-    }
-    /* 监控复选框样式 */
-    input[type="checkbox"] {
-      accent-color: #4CAF50; /* 选中时颜色 */
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
-    }
-    label {
-      color: var(--text-color);
-      user-select: none;
     }
   </style>
 </head>
@@ -563,29 +728,11 @@
   <div class="container">
     <div class="overview">
       <div class="header-container">
-        <div class="overview-title">📊 系统概览</div>
+        <div class="overview-title">🤖 系统概览</div>
         <div class="auth-buttons">
           <button class="login-button" id="loginButton" onclick="showLoginForm()">登录</button>
           <button class="logout-button" id="logoutButton" style="display: none;" onclick="logout()">登出</button>
         </div>
-      </div>
-      <div class="theme-toggle">
-        主题:
-        <button onclick="toggleTheme('system')" title="跟随系统">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 5h18c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2H3c-1.1 0-2-.9-2-2V7c0-1.1.9-2 2-2zm0 12h18V7H3v10zm2-8h2v2H5V9zm0 4h2v2H5v-2zm4-4h10v2H9V9zm0 4h10v2H9v-2z"/>
-          </svg>
-        </button>
-        <button onclick="toggleTheme('light')" title="浅色模式">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM12 2a.5.5 0 01.5.5v2a.5.5 0 01-1 0v-2A.5.5 0 0112 2zm0 17a.5.5 0 01.5.5v2a.5.5 0 01-1 0v-2a.5.5 0 01.5-.5zM2 12h2.5a.5.5 0 010 1H2a.5.5 0 010-1zm17.5 0h2a.5.5 0 010 1h-2a.5.5 0 010-1zM4.2 5.8l1.4-1.4a.5.5 0 01.7 0l1.4 1.4a.5.5 0 010 .7l-1.4 1.4a.5.5 0 01-.7 0L4.2 6.5a.5.5 0 010-.7zm13.2 0l1.4 1.4a.5.5 0 010 .7l1.4 1.4a.5.5 0 010 .7l-1.4 1.4a.5.5 0 01-.7 0l-1.4-1.4a.5.5 0 010-.7l-1.4-1.4a.5.5 0 010-.7l1.4-1.4a.5.5 0 01.7 0zM6.5 17.8l-1.4 1.4a.5.5 0 01-.7 0l-1.4-1.4a.5.5 0 010-.7l1.4-1.4a.5.5 0 01.7 0l1.4 1.4a.5.5 0 010 .7zm11 0l1.4 1.4a.5.5 0 010 .7l1.4 1.4a.5.5 0 010 .7l-1.4 1.4a.5.5 0 01-.7 0l-1.4-1.4a.5.5 0 010-.7l-1.4-1.4a.5.5 0 010-.7l1.4-1.4a.5.5 0 01.7 0z"/>
-          </svg>
-        </button>
-        <button onclick="toggleTheme('dark')" title="深色模式">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M21.4 13.7C20.6 13.9 19.8 14 19 14c-5 0-9-4-9-9 0-.2 0-.4.1-.6C5.6 5.6 2.5 9.5 2.2 14c-.1.9.1 1.8.5 2.6.7 1.5 2.1 2.5 3.8 2.8 1.9.2 3.8.3 5.6.3 2.6 0 5.1-.6 7.4-1.7 2-.9 3.7-2.4 4.9-4.2.3-.5.5-1.1.6-1.7 0 .6-.2 1.2-.6 1.6zM12.1 18.5c-1.7 0-3.5-.1-5.2-.4-1.5-.2-2.8-1.2-3.4-2.6-.3-.7-.5-1.6-.4-2.4.3-4.1 3-7.5 6.9-8.5-.1.4-.2.8-.2 1.2 0 4.5 3.3 8.2 7.5 8.9-1.9.9-3.9 1.4-6 1.4-.4 0-.8 0-1.2.4z"/>
-          </svg>
-        </button>
       </div>
       <div id="summary">
         <div>总用户数: <span id="totalUsers">0</span></div>
@@ -636,8 +783,8 @@
   <div id="loginOverlay" class="login-overlay">
     <div class="login-box">
       <h2>登录</h2>
-      <input type="text" id="username" placeholder="用户名">
-      <input type="password" id="password" placeholder="密码">
+      <input type="text" id="username" placeholder="用户名" aria-label="用户名">
+      <input type="password" id="password" placeholder="密码" aria-label="密码">
       <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
         <button onclick="login()">登录</button>
         <button onclick="hideLoginForm()">取消</button>
@@ -660,42 +807,6 @@
   </div>
 
   <script>
-    // 主题切换功能
-    function setTheme(theme) {
-      if (theme === 'system') {
-        localStorage.removeItem('theme');
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        document.documentElement.setAttribute('data-theme', systemPrefersDark ? 'dark' : 'light');
-      } else {
-        localStorage.setItem('theme', theme);
-        document.documentElement.setAttribute('data-theme', theme);
-      }
-    }
-
-    function toggleTheme(theme) {
-      setTheme(theme);
-    }
-
-    // 初始化主题
-    function initTheme() {
-      const savedTheme = localStorage.getItem('theme');
-      if (savedTheme) {
-        setTheme(savedTheme);
-      } else {
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        setTheme(systemPrefersDark ? 'dark' : 'light');
-      }
-    }
-
-    // 监听系统主题变化
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      if (!localStorage.getItem('theme')) {
-        setTheme('system');
-      }
-    });
-
-    initTheme();
-
     // 全局变量，表示当前是否已登录
     let isLoggedIn = false;
 
@@ -768,6 +879,7 @@
       document.getElementById('username').value = '';
       document.getElementById('password').value = '';
       document.getElementById('loginError').style.display = 'none';
+      document.getElementById('username').focus();
     }
 
     function hideLoginForm() {
@@ -974,8 +1086,6 @@
     class MetricsStreamManager {
       constructor() {
         this.eventSource = null;
-        this.clientId = null;
-        this.subscribedInstances = new Set();
       }
 
       connect(subscribedInstances = []) {
@@ -983,8 +1093,7 @@
           this.eventSource.close();
         }
 
-        this.subscribedInstances = new Set(subscribedInstances);
-        const instancesParam = Array.from(this.subscribedInstances).join(',');
+        const instancesParam = subscribedInstances.join(',');
         const token = localStorage.getItem('authToken');
         // 由于 EventSource 不支持直接设置 Authorization 头，这里通过查询参数传递 token
         const url = `/api/proxy/live-metrics-stream?instances=${encodeURIComponent(instancesParam)}&token=${encodeURIComponent(token || '')}`;
@@ -1006,40 +1115,10 @@
           this.eventSource.close();
           this.eventSource = null;
           // 可选：尝试重新连接
-          setTimeout(() => this.connect(Array.from(this.subscribedInstances)), 5000);
+          setTimeout(() => this.connect(subscribedInstances), 5000);
         };
 
         console.log(`SSE 连接已建立，订阅实例: ${instancesParam || '无'}`);
-      }
-
-      updateSubscriptions(newInstances) {
-        if (!this.clientId) {
-          this.clientId = localStorage.getItem('sseClientId') || crypto.randomUUID();
-          localStorage.setItem('sseClientId', this.clientId);
-        }
-
-        this.subscribedInstances = new Set(newInstances);
-        fetch('/api/proxy/update-subscriptions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            clientId: this.clientId,
-            instances: Array.from(this.subscribedInstances)
-          })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            console.log(`订阅更新成功: ${Array.from(this.subscribedInstances).join(', ') || '无'}`);
-          } else {
-            console.error(`订阅更新失败:`, data.error);
-          }
-        })
-        .catch(error => {
-          console.error(`更新订阅请求失败:`, error);
-        });
       }
 
       disconnect() {
@@ -1056,6 +1135,7 @@
     const serverStatus = new Map();
     let allInstances = []; // 存储所有实例数据，用于过滤和排序
     const chartInstances = new Map(); // 存储每个实例的图表实例
+    const chartDataBuffer = new Map(); // 存储图表数据缓冲以减少更新频率
 
     async function initialize() {
       await getUsernames();
@@ -1084,6 +1164,7 @@
         }
       });
       chartInstances.clear();
+      chartDataBuffer.clear();
       await initialize();
       applyFiltersAndSort(); // 确保刷新后重新应用过滤和排序
     }
@@ -1131,10 +1212,12 @@
       const canvas = document.getElementById(canvasId);
       if (!canvas) return null;
 
-      // 根据当前主题设置图表样式
-      const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
-      const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-      const textColor = isDarkMode ? '#fff' : '#333';
+      const gridColor = 'rgba(0, 212, 255, 0.1)';
+      const textColor = '#E0E0FF';
+      const cpuColor = '#00FFAA';
+      const memoryColor = '#00D4FF';
+      const uploadColor = '#FF9500';
+      const downloadColor = '#FF00FF';
 
       const ctx = canvas.getContext('2d');
       const chart = new Chart(ctx, {
@@ -1145,32 +1228,32 @@
             {
               label: 'CPU 使用率 (%)',
               data: [],
-              borderColor: '#4CAF50', // 绿色
-              backgroundColor: 'rgba(76, 175, 80, 0.2)',
+              borderColor: cpuColor,
+              backgroundColor: 'rgba(0, 255, 170, 0.2)',
               tension: 0.4,
               fill: true,
             },
             {
               label: '内存使用率 (%)',
               data: [],
-              borderColor: '#2196F3', // 蓝色
-              backgroundColor: 'rgba(33, 150, 243, 0.2)',
+              borderColor: memoryColor,
+              backgroundColor: 'rgba(0, 212, 255, 0.2)',
               tension: 0.4,
               fill: true,
             },
             {
               label: '上传速度 (KB/s)',
               data: [],
-              borderColor: '#F44336', // 红色
-              backgroundColor: 'rgba(244, 67, 54, 0.2)',
+              borderColor: uploadColor,
+              backgroundColor: 'rgba(255, 149, 0, 0.2)',
               tension: 0.4,
               fill: true,
             },
             {
               label: '下载速度 (KB/s)',
               data: [],
-              borderColor: '#FF9800', // 橙色
-              backgroundColor: 'rgba(255, 152, 0, 0.2)',
+              borderColor: downloadColor,
+              backgroundColor: 'rgba(255, 0, 255, 0.2)',
               tension: 0.4,
               fill: true,
             },
@@ -1183,28 +1266,36 @@
             legend: {
               labels: {
                 color: textColor,
-                font: { size: 12 }
+                font: { size: 12, family: "'Orbitron', sans-serif" }
               }
             },
             tooltip: {
               mode: 'index',
               intersect: false,
+              backgroundColor: 'rgba(20, 20, 40, 0.9)',
+              titleColor: textColor,
+              bodyColor: textColor,
+              padding: 12,
+              boxPadding: 8,
+              borderRadius: 6,
+              borderWidth: 1,
+              borderColor: 'rgba(0, 212, 255, 0.3)'
             }
           },
           scales: {
             y: {
               beginAtZero: true,
-              grid: { color: gridColor },
+              grid: { color: gridColor, drawTicks: false },
               ticks: {
                 color: textColor,
-                font: { size: 11 }
+                font: { size: 11, family: "'Orbitron', sans-serif" }
               }
             },
             x: {
-              grid: { color: gridColor },
+              grid: { color: gridColor, drawTicks: false },
               ticks: {
                 color: textColor,
-                font: { size: 11 },
+                font: { size: 11, family: "'Orbitron', sans-serif" },
                 maxRotation: 0,
                 minRotation: 0,
                 autoSkip: true,
@@ -1216,21 +1307,33 @@
             point: {
               radius: 0, // 隐藏数据点
               hitRadius: 5 // 确保悬停仍有效
+            },
+            line: {
+              borderWidth: 2
             }
           },
-          animation: false // 关闭动画，提升性能
+          animation: false // 禁用图表动画，减少性能开销
         }
       });
       chartInstances.set(instanceId, chart);
       return chart;
     }
 
-    // 更新图表数据
+    // 更新图表数据，带有缓冲机制减少更新频率
     function updateChart(instanceId, data) {
+      let buffer = chartDataBuffer.get(instanceId) || { data: [], count: 0 };
+      buffer.data.push(data);
+      buffer.count++;
+
+      if (buffer.count < 2) { // 每 2 次数据更新才渲染一次
+        chartDataBuffer.set(instanceId, buffer);
+        return;
+      }
+
       let chart = chartInstances.get(instanceId);
       if (!chart) {
         chart = createChart(instanceId);
-        if (!chart) return; // 如果图表未创建成功，直接返回
+        if (!chart) return;
       }
 
       // 获取当前数据集
@@ -1239,11 +1342,12 @@
       const uploadData = chart.data.datasets[2].data;
       const downloadData = chart.data.datasets[3].data;
 
-      // 追加新数据
-      cpuData.push(data.cpu_usage_pct);
-      memoryData.push(((data.memory_used_bytes / data.memory_total_bytes) * 100).toFixed(2));
-      uploadData.push((data.tx_bps / 1024).toFixed(2)); // 转换为 KB/s
-      downloadData.push((data.rx_bps / 1024).toFixed(2)); // 转换为 KB/s
+      // 追加最新数据
+      const latestData = buffer.data[buffer.data.length - 1];
+      cpuData.push(latestData.cpu_usage_pct);
+      memoryData.push(((latestData.memory_used_bytes / latestData.memory_total_bytes) * 100).toFixed(2));
+      uploadData.push((latestData.tx_bps / 1024).toFixed(2)); // 转换为 KB/s
+      downloadData.push((latestData.rx_bps / 1024).toFixed(2)); // 转换为 KB/s
 
       // 限制数据点数量为 30 个
       if (cpuData.length > 30) {
@@ -1255,6 +1359,46 @@
 
       // 更新图表
       chart.update();
+      
+      // 清空缓冲
+      chartDataBuffer.set(instanceId, { data: [], count: 0 });
+    }
+
+    // 计算相对时间的辅助函数
+    function formatRelativeTime(dateStr) {
+      if (!dateStr) return '未知时间';
+      try {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffSecs = Math.floor(diffMs / 1000);
+        const diffMins = Math.floor(diffSecs / 60);
+        const diffHrs = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHrs / 24);
+
+        if (diffDays > 7) {
+          return date.toLocaleDateString(); // 超过7天显示日期
+        } else if (diffDays > 0) {
+          return `${diffDays}天前`;
+        } else if (diffHrs > 0) {
+          return `${diffHrs}小时前`;
+        } else if (diffMins > 0) {
+          return `${diffMins}分钟前`;
+        } else {
+          return '刚刚';
+        }
+      } catch (error) {
+        console.error('时间格式化失败:', error);
+        return '未知时间';
+      }
+    }
+
+    // 切换信息块显示/隐藏的函数
+    function toggleInfoBlock(instanceId) {
+      const card = document.getElementById(`instance-${instanceId}`);
+      if (!card) return;
+
+      card.classList.toggle('info-expanded');
     }
 
     function renderInstanceCard(instance, container) {
@@ -1279,18 +1423,19 @@
                <path d="M21 3H3C1.9 3 1 3.9 1 5v3c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 5H4V6h16v2zm1 4H3c-1.1 0-2 .9-2 2v3c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2v-3c0-1.1-.9-2-2-2zm-1 5H4v-2h16v2zm1 4H3c-1.1 0-2 .9-2 2v3c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2v-3c0-1.1-.9-2-2-2zm-1 5H4v-2h16v2z"/>
             </svg>`; // 服务器图标，表示非 private 实例
         
+        // 处理 short_description，默认值“暂无描述”
+        const description = instance.short_description && instance.short_description.trim() ? instance.short_description : 'N/A';
+        // 处理 last_modified，格式化为相对时间
+        const lastModified = formatRelativeTime(instance.last_modified);
+
         card.innerHTML = `
           <div class="server-header">
-            <div class="server-name">
+            <div class="server-name" onclick="toggleInfoBlock('${instanceId}')">
               <div class="status-dot status-sleep"></div>
               ${iconSvg}
-              <div>${instance.name} </div>
+              <div>${instance.name}</div>
             </div>
             <div>
-              <label style="display: inline-flex; align-items: center; gap: 5px; font-size: 13px; cursor: pointer;">
-                监控
-                <input type="checkbox" id="monitor-${instanceId}" onchange="toggleMonitorInstance('${instanceId}', this.checked)" ${instance.status.toLowerCase() === 'running' ? 'checked' : ''}>
-              </label>
               <button class="chart-toggle-button" onclick="toggleChart('${instanceId}')">查看图表</button>
             </div>
           </div>
@@ -1314,6 +1459,16 @@
             <div class="metric-item">
               <div class="metric-label">下载</div>
               <div class="metric-value download">N/A</div>
+            </div>
+          </div>
+          <div class="info-block">
+            <div class="info-item">
+              <div class="info-label">描述</div>
+              <div class="info-value" title="${description}">${description}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">最近更新</div>
+              <div class="info-value">${lastModified}</div>
             </div>
           </div>
           <div class="action-buttons" style="display: ${isLoggedIn ? 'flex' : 'none'};">
@@ -1581,14 +1736,14 @@
         }
       });
       chartInstances.clear();
+      chartDataBuffer.clear();
       renderInstances(filteredInstances);
       
-      // 重新计算当前订阅的实例，只保留仍可见的实例
-      const visibleInstanceIds = new Set(filteredInstances.map(instance => instance.repo_id));
-      const updatedSubscriptions = Array.from(metricsStreamManager.subscribedInstances)
-        .filter(instanceId => visibleInstanceIds.has(instanceId));
-      metricsStreamManager.subscribedInstances = new Set(updatedSubscriptions);
-      metricsStreamManager.connect(updatedSubscriptions); // 重新连接
+      // 默认监控状态为 running 的实例
+      const runningInstances = filteredInstances
+        .filter(instance => instance.status.toLowerCase() === 'running')
+        .map(instance => instance.repo_id);
+      metricsStreamManager.connect(runningInstances);
       
       updateSummary();
       updateActionButtons(isLoggedIn);
@@ -1603,19 +1758,6 @@
     function manageInstance(repoId) {
       const manageUrl = `https://huggingface.co/spaces/${repoId}`;
       window.open(manageUrl, '_blank');
-    }
-    
-    // 新增函数：切换实例监控状态
-    function toggleMonitorInstance(instanceId, checked) {
-      const checkbox = document.getElementById(`monitor-${instanceId}`);
-      if (!checkbox) return;
-
-      if (checked) {
-        metricsStreamManager.subscribedInstances.add(instanceId);
-      } else {
-        metricsStreamManager.subscribedInstances.delete(instanceId);
-      }
-      metricsStreamManager.updateSubscriptions(Array.from(metricsStreamManager.subscribedInstances));
     }
   </script>
 </body>
