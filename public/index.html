@@ -1,1000 +1,1145 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>HF Space Manager</title>
-  <!-- 引入 Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <!-- 引入科技感字体 Orbitron -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-    body {
-      font-family: 'Orbitron', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: var(--background-color);
-      color: var(--text-color);
-      padding: 20px;
-      min-height: 100vh;
-      background-image: radial-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px), radial-gradient(rgba(255, 0, 255, 0.1) 1px, transparent 1px);
-      background-size: 40px 40px;
-      background-position: 0 0, 20px 20px;
-    }
-    :root {
-      /* 深色模式变量（默认且唯一） */
-      --background-color: #0A0A1E;
-      --text-color: #E0E0FF;
-      --secondary-text: #A0A0CC;
-      --card-background: rgba(20, 20, 40, 0.7);
-      --card-border: rgba(0, 212, 255, 0.3);
-      --metric-background: rgba(30, 30, 50, 0.6);
-      --metric-border: rgba(0, 212, 255, 0.2);
-      --metric-hover: rgba(40, 40, 70, 0.8);
-      --label-color: #A0A0CC;
-      --action-button-bg: rgba(0, 212, 255, 0.2);
-      --action-button-hover: rgba(0, 212, 255, 0.4);
-      --accent-color: #00D4FF;
-      --neon-pink: #FF00FF;
-      --neon-green: #00FFAA;
-    }
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0 15px;
-    }
-    .overview {
-      background: var(--card-background);
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 25px;
-      border: 1px solid var(--card-border);
-      box-shadow: 0 0 10px rgba(0, 212, 255, 0.3), inset 0 0 2px rgba(0, 212, 255, 0.5);
-      transition: background 0.3s ease, border 0.3s ease;
-    }
-    .overview-title {
-      font-size: 18px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 16px;
-      color: var(--accent-color);
-      text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
-    }
-    #summary {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 12px;
-    }
-    #summary div {
-      background: var(--metric-background);
-      padding: 14px;
-      border-radius: 6px;
-      border: 1px solid var(--metric-border);
-      transition: background 0.3s ease;
-      box-shadow: inset 0 0 3px rgba(0, 212, 255, 0.3);
-    }
-    #summary div {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--secondary-text);
-    }
-    #summary span {
-      display: block;
-      font-size: 22px;
-      font-weight: 700;
-      margin-top: 6px;
-      color: var(--text-color);
-      text-shadow: 0 0 3px rgba(0, 212, 255, 0.3);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .stats-container {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 24px;
-      margin-top: 20px;
-    }
-    .user-group {
-      background: var(--card-background);
-      border-radius: 8px;
-      border: 1px solid var(--card-border);
-      overflow: hidden;
-      box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
-      transition: background 0.3s ease, border 0.3s ease;
-    }
-    .user-group summary {
-      padding: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      color: var(--accent-color);
-      background: var(--metric-background);
-      transition: background 0.2s ease;
-      text-shadow: 0 0 4px rgba(0, 212, 255, 0.4);
-    }
-    .user-group summary:hover {
-      background: var(--metric-hover);
-      box-shadow: inset 0 0 5px rgba(0, 212, 255, 0.5);
-    }
-    .user-group summary::-webkit-details-marker {
-      color: var(--accent-color);
-    }
-    .user-servers {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
-      padding: 16px;
-    }
-    .server-card {
-      background: var(--metric-background);
-      border-radius: 6px;
-      padding: 16px;
-      border: 1px solid var(--metric-border);
-      transition: background 0.2s ease, box-shadow 0.2s ease;
-      min-height: 150px;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 0 5px rgba(0, 212, 255, 0.2);
-      position: relative;
-      overflow: hidden;
-    }
-    .server-card.not-logged-in {
-      min-height: 120px;
-    }
-    .server-card:hover {
-      background: var(--metric-hover);
-      box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
-    }
-    .server-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: linear-gradient(90deg, var(--accent-color), var(--neon-pink));
-      opacity: 0.7;
-    }
-    .server-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      font-size: 14px;
-    }
-    .server-name {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex: 1;
-      min-width: 0;
-      cursor: pointer;
-      position: relative;
-    }
-    .server-name:hover {
-      opacity: 0.8;
-    }
-    .server-name::after {
-      content: '▼';
-      font-size: 12px;
-      color: var(--accent-color);
-      margin-left: 8px;
-      transition: transform 0.3s ease;
-    }
-    .server-card.info-expanded .server-name::after {
-      transform: rotate(180deg);
-    }
-    .server-name div {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 100%;
-      font-weight: 500;
-      color: var(--accent-color);
-      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
-    }
-    .server-flag {
-      width: 20px;
-      height: 20px;
-      border-radius: 6px;
-      flex-shrink: 0;
-      filter: drop-shadow(0 0 3px rgba(0, 212, 255, 0.3));
-    }
-    .metric-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .metric-item {
-      background: var(--card-background);
-      padding: 10px;
-      border-radius: 4px;
-      border: 1px solid var(--metric-border);
-      transition: background 0.2s ease;
-      overflow: hidden;
-      box-shadow: inset 0 0 3px rgba(0, 212, 255, 0.2);
-    }
-    .metric-item:hover {
-      background: var(--metric-hover);
-      box-shadow: inset 0 0 5px rgba(0, 212, 255, 0.4);
-    }
-    .metric-label {
-      color: var(--label-color);
-      font-size: 12px;
-      margin-bottom: 4px;
-      white-space: nowrap;
-    }
-    .metric-value {
-      font-size: 14px;
-      font-weight: 600;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 100%;
-      color: var(--text-color);
-      text-shadow: 0 0 2px rgba(0, 212, 255, 0.3);
-    }
-    /* 新增信息块样式 */
-    .info-block {
-      background: var(--card-background);
-      padding: 10px;
-      border-radius: 4px;
-      border: 1px solid var(--metric-border);
-      margin-top: 12px;
-      transition: background 0.2s ease, height 0.3s ease;
-      overflow: hidden;
-      box-shadow: inset 0 0 3px rgba(0, 212, 255, 0.2);
-      display: none;
-    }
-    .server-card.info-expanded .info-block {
-      display: block;
-    }
-    .info-block:hover {
-      background: var(--metric-hover);
-      box-shadow: inset 0 0 5px rgba(0, 212, 255, 0.4);
-    }
-    .info-item {
-      margin-bottom: 6px;
-    }
-    .info-item:last-child {
-      margin-bottom: 0;
-    }
-    .info-label {
-      color: var(--label-color);
-      font-size: 12px;
-      margin-bottom: 4px;
-      white-space: nowrap;
-    }
-    .info-value {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-color);
-      text-shadow: 0 0 2px rgba(0, 212, 255, 0.3);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      line-clamp: 2;
-    }
-    .status-dot {
-      display: inline-block;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-      width: 10px;
-      height: 10px;
-      flex-shrink: 0;
-    }
-    .status-online {
-      background-color: var(--neon-green);
-      color: var(--neon-green);
-      box-shadow: 0 0 8px rgba(0, 255, 170, 0.6);
-    }
-    .status-offline {
-      background-color: #ff3b30;
-      color: #ff3b30;
-      box-shadow: 0 0 8px rgba(255, 59, 48, 0.6);
-    }
-    .status-sleep {
-      background-color: var(--neon-pink);
-      color: var(--neon-pink);
-      box-shadow: 0 0 8px rgba(255, 0, 255, 0.6);
-      animation: none;
-    }
-    .action-buttons {
-      display: flex;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .action-button {
-      background: var(--action-button-bg);
-      color: var(--accent-color);
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: background 0.2s ease, box-shadow 0.2s ease;
-      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
-      position: relative;
-      overflow: hidden;
-    }
-    .action-button:hover {
-      background: var(--action-button-hover);
-      box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-    }
-    .action-button::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(0, 212, 255, 0.2) 0%, transparent 70%);
-      transform: translate(-50%, -50%);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    .action-button:hover::after {
-      opacity: 1;
-    }
-    .network-stats {
-      background: var(--metric-background);
-      border: 1px solid var(--metric-border);
-      margin-top: 20px;
-      padding: 16px;
-      border-radius: 6px;
-      transition: background 0.3s ease;
-      box-shadow: 0 0 5px rgba(0, 212, 255, 0.2);
-    }
-    .network-item {
-      font-size: 14px;
-      color: var(--secondary-text);
-    }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(0, 255, 170, 0.6); }
-      70% { box-shadow: 0 0 0 8px rgba(0, 255, 170, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(0, 255, 170, 0); }
-    }
-    @media (max-width: 900px) {
-      #summary {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-      }
-      #summary div {
-        padding: 10px;
-      }
-      #summary span {
-        font-size: 20px;
-      }
-      .metric-grid {
-        grid-template-columns: repeat(3, 1fr); /* 与系统概览同步，变为3列 */
-        gap: 8px;
-      }
-      .metric-item {
-        padding: 8px;
-      }
-      .metric-value {
-        font-size: 13px;
-      }
-      .info-block {
-        padding: 8px;
-      }
-      .info-value {
-        font-size: 13px;
-      }
-    }
-    @media (max-width: 600px) {
-      #summary {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-      }
-      #summary div {
-        padding: 8px;
-      }
-      #summary span {
-        font-size: 18px;
-      }
-      .user-servers {
-        grid-template-columns: 1fr !important;
-      }
-      .metric-grid {
-        grid-template-columns: repeat(2, 1fr); /* 与系统概览同步，变为2列 */
-        gap: 8px;
-      }
-      .metric-item {
-        padding: 6px;
-      }
-      .metric-value {
-        font-size: 13px;
-      }
-      .server-header {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-      .container {
-        padding: 0 10px;
-      }
-      .overview {
-        padding: 16px;
-        margin-bottom: 20px;
-      }
-      .info-block {
-        padding: 6px;
-      }
-      .info-value {
-        font-size: 12px;
-        -webkit-line-clamp: 1;
-        line-clamp: 1;
-      }
-    }
-    @media (max-width: 400px) {
-      #summary {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
-      }
-      #summary div {
-        padding: 6px;
-      }
-      #summary span {
-        font-size: 16px;
-      }
-      .metric-grid {
-        grid-template-columns: repeat(2, 1fr); /* 保持2列，进一步优化间距和字体 */
-        gap: 6px;
-      }
-      .metric-item {
-        padding: 5px;
-      }
-      .metric-value {
-        font-size: 12px;
-      }
-      .info-block {
-        padding: 5px;
-      }
-      .info-value {
-        font-size: 11px;
-      }
-    }
-    .login-overlay, .confirm-overlay, .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(10, 10, 30, 0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      display: none;
-    }
-    .login-box, .confirm-box {
-      background: var(--card-background);
-      padding: 24px;
-      border-radius: 8px;
-      border: 1px solid var(--card-border);
-      width: 320px;
-      text-align: center;
-      box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
-      position: relative;
-    }
-    .login-box::before, .confirm-box::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 3px;
-      background: linear-gradient(90deg, var(--accent-color), var(--neon-pink));
-    }
-    .login-box h2, .confirm-box h2 {
-      margin-bottom: 20px;
-      color: var(--accent-color);
-      font-size: 18px;
-      font-weight: 600;
-      text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
-    }
-    .login-box input {
-      width: 100%;
-      padding: 12px 16px;
-      margin: 12px 0;
-      border: 1px solid var(--metric-border);
-      border-radius: 6px;
-      background: var(--metric-background);
-      color: var(--text-color);
-      font-size: 16px;
-      transition: border 0.2s ease, box-shadow 0.2s ease;
-    }
-    .login-box input:focus {
-      border-color: var(--accent-color);
-      box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
-      outline: none;
-    }
-    .login-box button, .confirm-box button {
-      width: 48%;
-      padding: 12px;
-      background: var(--action-button-bg);
-      border: none;
-      border-radius: 6px;
-      color: var(--accent-color);
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 500;
-      transition: background 0.2s ease, box-shadow 0.2s ease;
-      margin: 10px 1%;
-      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
-    }
-    .login-box button:hover, .confirm-box button:hover {
-      background: var(--action-button-hover);
-      box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-    }
-    .login-box button:last-child, .confirm-box button:last-child {
-      background: transparent;
-      color: var(--neon-pink);
-    }
-    .login-box button:last-child:hover, .confirm-box button:last-child:hover {
-      background: rgba(255, 0, 255, 0.1);
-      box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
-    }
-    .login-error {
-      color: #ff3b30;
-      margin-top: 12px;
-      font-size: 14px;
-      text-shadow: 0 0 3px rgba(255, 59, 48, 0.5);
-    }
-    .login-button, .logout-button {
-      background: var(--action-button-bg);
-      border: none;
-      color: var(--accent-color);
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: background 0.2s ease, box-shadow 0.2s ease;
-      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
-    }
-    .login-button:hover, .logout-button:hover {
-      background: var(--action-button-hover);
-      box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
-    }
-    .header-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-    .auth-buttons {
-      display: flex;
-      gap: 10px;
-    }
-    /* 加载状态指示器样式 */
-    .loader {
-      border: 5px solid transparent;
-      border-top: 5px solid var(--accent-color);
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      animation: spin 1s linear infinite;
-      box-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    /* 优化后的过滤与排序控件样式 */
-    .filter-sort-panel {
-      background: var(--card-background);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      align-items: center;
-      box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
-      transition: background 0.3s ease;
-    }
-    .filter-sort-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 14px;
-      color: var(--text-color);
-      min-width: 200px;
-    }
-    .filter-sort-group label {
-      white-space: nowrap;
-      color: var(--secondary-text);
-      font-weight: 500;
-      text-shadow: 0 0 2px rgba(0, 212, 255, 0.3);
-    }
-    .filter-sort-group select {
-      flex: 1;
-      background: var(--metric-background);
-      border: 1px solid var(--metric-border);
-      color: var(--text-color);
-      padding: 10px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: background 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
-      outline: none;
-      appearance: none;
-      background-image: url("data:image/svg+xml;utf8,<svg fill='%2300D4FF' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
-      background-repeat: no-repeat;
-      background-position: right 10px center;
-      padding-right: 36px;
-      text-shadow: 0 0 2px rgba(0, 212, 255, 0.3);
-    }
-    .filter-sort-group select:hover {
-      background-color: var(--metric-hover);
-      box-shadow: 0 0 6px rgba(0, 212, 255, 0.4);
-    }
-    .filter-sort-group select:focus {
-      border-color: var(--accent-color);
-      box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
-    }
-    .refresh-button {
-      background: var(--action-button-bg);
-      border: none;
-      color: var(--accent-color);
-      padding: 8px 16px; /* 与 .chart-toggle-button 一致 */
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: background 0.2s ease, box-shadow 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
-    }
-    .refresh-button:hover {
-      background: var(--action-button-hover);
-      box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-    }
-    .refresh-icon {
-      width: 16px;
-      height: 16px;
-      fill: var(--accent-color);
-    }
-    @media (max-width: 600px) {
-      .filter-sort-group {
-        min-width: 100%;
-      }
-      .filter-sort-panel {
-        gap: 14px;
-        padding: 14px;
-      }
-    }
-    /* 图表相关样式 */
-    .chart-container {
-      display: none;
-      margin-top: 16px;
-      background: var(--card-background);
-      border: 1px solid var(--card-border);
-      border-radius: 6px;
-      padding: 12px;
-      height: 300px;
-      transition: background 0.3s ease;
-      box-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
-    }
-    .chart-toggle-button {
-      background: var(--action-button-bg);
-      color: var(--accent-color);
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: background 0.2s ease, box-shadow 0.2s ease;
-      margin-left: auto;
-      white-space: nowrap;
-      text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
-    }
-    .chart-toggle-button:hover {
-      background: var(--action-button-hover);
-      box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
-    }
-    .expanded .chart-container {
-      display: block;
-    }
-    canvas {
-      width: 100% !important;
-      height: auto !important;
-    }
-    @media (max-width: 600px) {
-      .chart-container {
-        height: 250px;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HF Space Manager</title>
+    <!-- 引入 Chart.js CDN -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <!-- 引入科技感字体 Orbitron -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: 'Orbitron', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--background-color);
+            color: var(--text-color);
+            padding: 20px;
+            min-height: 100vh;
+            background-image: radial-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px), radial-gradient(rgba(255, 0, 255, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+        }
+
+        :root {
+            /* 深色模式变量（默认且唯一） */
+            --background-color: #0A0A1E;
+            --text-color: #E0E0FF;
+            --secondary-text: #A0A0CC;
+            --card-background: rgba(20, 20, 40, 0.7);
+            --card-border: rgba(0, 212, 255, 0.3);
+            --metric-background: rgba(30, 30, 50, 0.6);
+            --metric-border: rgba(0, 212, 255, 0.2);
+            --metric-hover: rgba(40, 40, 70, 0.8);
+            --label-color: #A0A0CC;
+            --action-button-bg: rgba(0, 212, 255, 0.2);
+            --action-button-hover: rgba(0, 212, 255, 0.4);
+            --accent-color: #00D4FF;
+            --neon-pink: #FF00FF;
+            --neon-green: #00FFAA;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        .overview {
+            background: var(--card-background);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3), inset 0 0 2px rgba(0, 212, 255, 0.5);
+            transition: background 0.3s ease, border 0.3s ease;
+        }
+
+        .overview-title {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            color: var(--accent-color);
+            text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
+        }
+
+        #summary {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+        }
+
+        #summary div {
+            background: var(--metric-background);
+            padding: 14px;
+            border-radius: 6px;
+            border: 1px solid var(--metric-border);
+            transition: background 0.3s ease;
+            box-shadow: inset 0 0 3px rgba(0, 212, 255, 0.3);
+        }
+
+        #summary div {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--secondary-text);
+        }
+
+        #summary span {
+            display: block;
+            font-size: 22px;
+            font-weight: 700;
+            margin-top: 6px;
+            color: var(--text-color);
+            text-shadow: 0 0 3px rgba(0, 212, 255, 0.3);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            margin-top: 20px;
+        }
+
+        .user-group {
+            background: var(--card-background);
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            overflow: hidden;
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+            transition: background 0.3s ease, border 0.3s ease;
+        }
+
+        .user-group summary {
+            padding: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--accent-color);
+            background: var(--metric-background);
+            transition: background 0.2s ease;
+            text-shadow: 0 0 4px rgba(0, 212, 255, 0.4);
+        }
+
+        .user-group summary:hover {
+            background: var(--metric-hover);
+            box-shadow: inset 0 0 5px rgba(0, 212, 255, 0.5);
+        }
+
+        .user-group summary::-webkit-details-marker {
+            color: var(--accent-color);
+        }
+
+        .user-servers {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            padding: 16px;
+        }
+
+        .server-card {
+            background: var(--metric-background);
+            border-radius: 6px;
+            padding: 16px;
+            border: 1px solid var(--metric-border);
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 5px rgba(0, 212, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .server-card.not-logged-in {
+            min-height: 120px;
+        }
+
+        .server-card:hover {
+            background: var(--metric-hover);
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
+        }
+
+        .server-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-color), var(--neon-pink));
+            opacity: 0.7;
+        }
+
+        .server-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            /*margin-bottom: 12px;*/
+            font-size: 14px;
+        }
+
+        .server-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .server-name div {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+            font-weight: 500;
+            color: var(--accent-color);
+            text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
+        }
+
+        .server-description {
+            font-size: 0.85rem;
+            color: var(--text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 80%;
+            margin: 5px 0;
+        }
+
+        .server-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+        }
+
+        .last-modified {
+            font-size: 0.8rem;
+            color: #888;
+            margin-right: 10px;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .server-description {
+                max-width: 100%;
+            }
+
+            .server-actions {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .chart-toggle-button {
+                margin-top: 5px;
+            }
+        }
+
+        .server-flag {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            flex-shrink: 0;
+            filter: drop-shadow(0 0 3px rgba(0, 212, 255, 0.3));
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .metric-item {
+            background: var(--card-background);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid var(--metric-border);
+            transition: background 0.2s ease;
+            overflow: hidden;
+            box-shadow: inset 0 0 3px rgba(0, 212, 255, 0.2);
+        }
+
+        .metric-item:hover {
+            background: var(--metric-hover);
+            box-shadow: inset 0 0 5px rgba(0, 212, 255, 0.4);
+        }
+
+        .metric-label {
+            color: var(--label-color);
+            font-size: 12px;
+            margin-bottom: 4px;
+            white-space: nowrap;
+        }
+
+        .metric-value {
+            font-size: 14px;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+            color: var(--text-color);
+            text-shadow: 0 0 2px rgba(0, 212, 255, 0.3);
+        }
+
+        /* 新增信息块样式 */
+        .info-block {
+            background: var(--card-background);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid var(--metric-border);
+            margin-top: 12px;
+            transition: background 0.2s ease, height 0.3s ease;
+            overflow: hidden;
+            box-shadow: inset 0 0 3px rgba(0, 212, 255, 0.2);
+            display: none;
+        }
+
+        .server-card.info-expanded .info-block {
+            display: block;
+        }
+
+        .info-block:hover {
+            background: var(--metric-hover);
+            box-shadow: inset 0 0 5px rgba(0, 212, 255, 0.4);
+        }
+
+        .info-item {
+            margin-bottom: 6px;
+        }
+
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            color: var(--label-color);
+            font-size: 12px;
+            margin-bottom: 4px;
+            white-space: nowrap;
+        }
+
+        .info-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-color);
+            text-shadow: 0 0 2px rgba(0, 212, 255, 0.3);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-clamp: 2;
+        }
+
+        .status-dot {
+            display: inline-block;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            width: 10px;
+            height: 10px;
+            flex-shrink: 0;
+        }
+
+        .status-online {
+            background-color: var(--neon-green);
+            color: var(--neon-green);
+            box-shadow: 0 0 8px rgba(0, 255, 170, 0.6);
+        }
+
+        .status-offline {
+            background-color: #ff3b30;
+            color: #ff3b30;
+            box-shadow: 0 0 8px rgba(255, 59, 48, 0.6);
+        }
+
+        .status-sleep {
+            background-color: var(--neon-pink);
+            color: var(--neon-pink);
+            box-shadow: 0 0 8px rgba(255, 0, 255, 0.6);
+            animation: none;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .action-button {
+            background: var(--action-button-bg);
+            color: var(--accent-color);
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+            text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-button:hover {
+            background: var(--action-button-hover);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .action-button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.2) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .action-button:hover::after {
+            opacity: 1;
+        }
+
+        .network-stats {
+            background: var(--metric-background);
+            border: 1px solid var(--metric-border);
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 6px;
+            transition: background 0.3s ease;
+            box-shadow: 0 0 5px rgba(0, 212, 255, 0.2);
+        }
+
+        .network-item {
+            font-size: 14px;
+            color: var(--secondary-text);
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 255, 170, 0.6);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(0, 255, 170, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 255, 170, 0);
+            }
+        }
+
+        @media (max-width: 900px) {
+            #summary {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+
+            #summary div {
+                padding: 10px;
+            }
+
+            #summary span {
+                font-size: 20px;
+            }
+
+            .metric-grid {
+                grid-template-columns: repeat(3, 1fr); /* 与系统概览同步，变为3列 */
+                gap: 8px;
+            }
+
+            .metric-item {
+                padding: 8px;
+            }
+
+            .metric-value {
+                font-size: 13px;
+            }
+
+            .info-block {
+                padding: 8px;
+            }
+
+            .info-value {
+                font-size: 13px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            #summary {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            #summary div {
+                padding: 8px;
+            }
+
+            #summary span {
+                font-size: 18px;
+            }
+
+            .user-servers {
+                grid-template-columns: 1fr !important;
+            }
+
+            .metric-grid {
+                grid-template-columns: repeat(2, 1fr); /* 与系统概览同步，变为2列 */
+                gap: 8px;
+            }
+
+            .metric-item {
+                padding: 6px;
+            }
+
+            .metric-value {
+                font-size: 13px;
+            }
+
+            .server-header {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .container {
+                padding: 0 10px;
+            }
+
+            .overview {
+                padding: 16px;
+                margin-bottom: 20px;
+            }
+
+            .info-block {
+                padding: 6px;
+            }
+
+            .info-value {
+                font-size: 12px;
+                -webkit-line-clamp: 1;
+                line-clamp: 1;
+            }
+        }
+
+        @media (max-width: 400px) {
+            #summary {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+
+            #summary div {
+                padding: 6px;
+            }
+
+            #summary span {
+                font-size: 16px;
+            }
+
+            .metric-grid {
+                grid-template-columns: repeat(2, 1fr); /* 保持2列，进一步优化间距和字体 */
+                gap: 6px;
+            }
+
+            .metric-item {
+                padding: 5px;
+            }
+
+            .metric-value {
+                font-size: 12px;
+            }
+
+            .info-block {
+                padding: 5px;
+            }
+
+            .info-value {
+                font-size: 11px;
+            }
+        }
+
+        .login-overlay, .confirm-overlay, .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 30, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .login-box, .confirm-box {
+            background: var(--card-background);
+            padding: 24px;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            width: 320px;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+            position: relative;
+        }
+
+        .login-box::before, .confirm-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-color), var(--neon-pink));
+        }
+
+        .login-box h2, .confirm-box h2 {
+            margin-bottom: 20px;
+            color: var(--accent-color);
+            font-size: 18px;
+            font-weight: 600;
+            text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 12px 16px;
+            margin: 12px 0;
+            border: 1px solid var(--metric-border);
+            border-radius: 6px;
+            background: var(--metric-background);
+            color: var(--text-color);
+            font-size: 16px;
+            transition: border 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .login-box input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
+            outline: none;
+        }
+
+        .login-box button, .confirm-box button {
+            width: 48%;
+            padding: 12px;
+            background: var(--action-button-bg);
+            border: none;
+            border-radius: 6px;
+            color: var(--accent-color);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+            margin: 10px 1%;
+            text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
+        }
+
+        .login-box button:hover, .confirm-box button:hover {
+            background: var(--action-button-hover);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .login-box button:last-child, .confirm-box button:last-child {
+            background: transparent;
+            color: var(--neon-pink);
+        }
+
+        .login-box button:last-child:hover, .confirm-box button:last-child:hover {
+            background: rgba(255, 0, 255, 0.1);
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+        }
+
+        .login-error {
+            color: #ff3b30;
+            margin-top: 12px;
+            font-size: 14px;
+            text-shadow: 0 0 3px rgba(255, 59, 48, 0.5);
+        }
+
+        .login-button, .logout-button {
+            background: var(--action-button-bg);
+            border: none;
+            color: var(--accent-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+            text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
+        }
+
+        .login-button:hover, .logout-button:hover {
+            background: var(--action-button-hover);
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* 加载状态指示器样式 */
+        .loader {
+            border: 5px solid transparent;
+            border-top: 5px solid var(--accent-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 优化后的过滤与排序控件样式 */
+        .filter-sort-panel {
+            background: var(--card-background);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+            transition: background 0.3s ease;
+        }
+
+        .filter-sort-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--text-color);
+            min-width: 200px;
+        }
+
+        .filter-sort-group label {
+            white-space: nowrap;
+            color: var(--secondary-text);
+            font-weight: 500;
+            text-shadow: 0 0 2px rgba(0, 212, 255, 0.3);
+        }
+
+        .filter-sort-group select {
+            flex: 1;
+            background: var(--metric-background);
+            border: 1px solid var(--metric-border);
+            color: var(--text-color);
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
+            outline: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='%2300D4FF' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 36px;
+            text-shadow: 0 0 2px rgba(0, 212, 255, 0.3);
+        }
+
+        .filter-sort-group select:hover {
+            background-color: var(--metric-hover);
+            box-shadow: 0 0 6px rgba(0, 212, 255, 0.4);
+        }
+
+        .filter-sort-group select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
+        }
+
+        .refresh-button {
+            background: var(--action-button-bg);
+            border: none;
+            color: var(--accent-color);
+            padding: 8px 16px; /* 与 .chart-toggle-button 一致 */
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
+        }
+
+        .refresh-button:hover {
+            background: var(--action-button-hover);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .refresh-icon {
+            width: 16px;
+            height: 16px;
+            fill: var(--accent-color);
+        }
+
+        @media (max-width: 600px) {
+            .filter-sort-group {
+                min-width: 100%;
+            }
+
+            .filter-sort-panel {
+                gap: 14px;
+                padding: 14px;
+            }
+        }
+
+        /* 图表相关样式 */
+        .chart-container {
+            display: none;
+            margin-top: 16px;
+            background: var(--card-background);
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            padding: 12px;
+            height: 300px;
+            transition: background 0.3s ease;
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+        }
+
+        .chart-toggle-button {
+            background: var(--action-button-bg);
+            color: var(--accent-color);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+            margin-left: auto;
+            white-space: nowrap;
+            text-shadow: 0 0 3px rgba(0, 212, 255, 0.5);
+        }
+
+        .chart-toggle-button:hover {
+            background: var(--action-button-hover);
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
+        }
+
+        .expanded .chart-container {
+            display: block;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        @media (max-width: 600px) {
+            .chart-container {
+                height: 250px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
+<div class="container">
     <div class="overview">
-      <div class="header-container">
-        <div class="overview-title">🤖 系统概览</div>
-        <div class="auth-buttons">
-          <button class="login-button" id="loginButton" onclick="showLoginForm()">登录</button>
-          <button class="logout-button" id="logoutButton" style="display: none;" onclick="logout()">登出</button>
+        <div class="header-container">
+            <div class="overview-title">🤖 系统概览</div>
+            <div class="auth-buttons">
+                <button class="login-button" id="loginButton" onclick="showLoginForm()">登录</button>
+                <button class="logout-button" id="logoutButton" style="display: none;" onclick="logout()">登出</button>
+            </div>
         </div>
-      </div>
-      <div id="summary">
-        <div>总用户数: <span id="totalUsers">0</span></div>
-        <div>总实例数: <span id="totalServers">0</span></div>
-        <div>在线实例: <span id="onlineServers">0</span></div>
-        <div>离线实例: <span id="offlineServers">0</span></div>
-        <div>总上传: <span id="totalUpload">0 B/s</span></div>
-        <div>总下载: <span id="totalDownload">0 B/s</span></div>
-      </div>
+        <div id="summary">
+            <div>总用户数: <span id="totalUsers">0</span></div>
+            <div>总实例数: <span id="totalServers">0</span></div>
+            <div>在线实例: <span id="onlineServers">0</span></div>
+            <div>离线实例: <span id="offlineServers">0</span></div>
+            <div>总上传: <span id="totalUpload">0 B/s</span></div>
+            <div>总下载: <span id="totalDownload">0 B/s</span></div>
+        </div>
     </div>
     <!-- 优化后的过滤与排序面板 -->
     <div class="filter-sort-panel">
-      <div class="filter-sort-group">
-        <label for="statusFilter">过滤状态:</label>
-        <select id="statusFilter" onchange="applyFiltersAndSort()">
-          <option value="all">全部状态</option>
-          <option value="running">运行中</option>
-          <option value="sleeping">休眠中</option>
-          <option value="stopped">已停止</option>
-        </select>
-      </div>
-      <div class="filter-sort-group">
-        <label for="userFilter">过滤用户:</label>
-        <select id="userFilter" onchange="applyFiltersAndSort()">
-          <option value="all">全部用户</option>
-        </select>
-      </div>
-      <div class="filter-sort-group">
-        <label for="sortBy">排序方式:</label>
-        <select id="sortBy" onchange="applyFiltersAndSort()">
-          <option value="name-asc">名称 (A-Z)</option>
-          <option value="name-desc">名称 (Z-A)</option>
-          <option value="status-asc">状态 (运行-停止)</option>
-          <option value="status-desc">状态 (停止-运行)</option>
-        </select>
-      </div>
-      <button class="refresh-button" onclick="refreshData()">
-        <svg class="refresh-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-        </svg>
-        刷新数据
-      </button>
+        <div class="filter-sort-group">
+            <label for="statusFilter">过滤状态:</label>
+            <select id="statusFilter" onchange="applyFiltersAndSort()">
+                <option value="all">全部状态</option>
+                <option value="running">运行中</option>
+                <option value="sleeping">休眠中</option>
+                <option value="stopped">已停止</option>
+            </select>
+        </div>
+        <div class="filter-sort-group">
+            <label for="userFilter">过滤用户:</label>
+            <select id="userFilter" onchange="applyFiltersAndSort()">
+                <option value="all">全部用户</option>
+            </select>
+        </div>
+        <div class="filter-sort-group">
+            <label for="sortBy">排序方式:</label>
+            <select id="sortBy" onchange="applyFiltersAndSort()">
+                <option value="name-asc">名称 (A-Z)</option>
+                <option value="name-desc">名称 (Z-A)</option>
+                <option value="status-asc">状态 (运行-停止)</option>
+                <option value="status-desc">状态 (停止-运行)</option>
+            </select>
+        </div>
+        <button class="refresh-button" onclick="refreshData()">
+            <svg class="refresh-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+            </svg>
+            刷新数据
+        </button>
     </div>
     <div id="servers" class="stats-container">
     </div>
-  </div>
-  <!-- 登录弹窗 -->
-  <div id="loginOverlay" class="login-overlay">
+</div>
+<!-- 登录弹窗 -->
+<div id="loginOverlay" class="login-overlay">
     <div class="login-box">
-      <h2>登录</h2>
-      <input type="text" id="username" placeholder="用户名" aria-label="用户名">
-      <input type="password" id="password" placeholder="密码" aria-label="密码">
-      <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
-        <button onclick="login()">登录</button>
-        <button onclick="hideLoginForm()">取消</button>
-      </div>
-      <div id="loginError" class="login-error" style="display: none;"></div>
+        <h2>登录</h2>
+        <input type="text" id="username" placeholder="用户名" aria-label="用户名">
+        <input type="password" id="password" placeholder="密码" aria-label="密码">
+        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+            <button onclick="login()">登录</button>
+            <button onclick="hideLoginForm()">取消</button>
+        </div>
+        <div id="loginError" class="login-error" style="display: none;"></div>
     </div>
-  </div>
-  <!-- 确认弹窗 -->
-  <div id="confirmOverlay" class="confirm-overlay">
+</div>
+<!-- 确认弹窗 -->
+<div id="confirmOverlay" class="confirm-overlay">
     <div class="confirm-box">
-      <h2 id="confirmTitle">确认操作</h2>
-      <p id="confirmMessage" style="margin-bottom: 20px; color: var(--text-color);"></p>
-      <button onclick="confirmAction()">确认</button>
-      <button onclick="cancelAction()">取消</button>
+        <h2 id="confirmTitle">确认操作</h2>
+        <p id="confirmMessage" style="margin-bottom: 20px; color: var(--text-color);"></p>
+        <button onclick="confirmAction()">确认</button>
+        <button onclick="cancelAction()">取消</button>
     </div>
-  </div>
-  <!-- 加载状态覆盖层 -->
-  <div id="loadingOverlay" class="loading-overlay">
+</div>
+<!-- 加载状态覆盖层 -->
+<div id="loadingOverlay" class="loading-overlay">
     <div class="loader"></div>
-  </div>
+</div>
 
-  <script>
+<script>
     // 全局变量，表示当前是否已登录
     let isLoggedIn = false;
 
     // 加载状态控制函数
     function showLoading() {
-      document.getElementById('loadingOverlay').style.display = 'flex';
+        document.getElementById('loadingOverlay').style.display = 'flex';
     }
 
     function hideLoading() {
-      document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('loadingOverlay').style.display = 'none';
     }
 
     // 登录状态管理
     function checkLoginStatus() {
-      const token = localStorage.getItem('authToken');
-      const loginButton = document.getElementById('loginButton');
-      const logoutButton = document.getElementById('logoutButton');
+        const token = localStorage.getItem('authToken');
+        const loginButton = document.getElementById('loginButton');
+        const logoutButton = document.getElementById('logoutButton');
 
-      if (token) {
-        console.log('本地存储中找到 token，尝试验证:', token.slice(0, 8) + '...');
-        showLoading();
-        return fetch('/api/verify-token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token })
-        })
-        .then(response => response.json())
-        .then(data => {
-          hideLoading();
-          if (data.success) {
-            console.log('Token 验证成功，用户已登录');
-            isLoggedIn = true;
-            loginButton.style.display = 'none';
-            logoutButton.style.display = 'block';
-            updateActionButtons(true);
-          } else {
-            console.log('Token 验证失败，清除本地存储:', data.message);
-            localStorage.removeItem('authToken');
+        if (token) {
+            console.log('本地存储中找到 token，尝试验证:', token.slice(0, 8) + '...');
+            showLoading();
+            return fetch('/api/verify-token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({token})
+            })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        console.log('Token 验证成功，用户已登录');
+                        isLoggedIn = true;
+                        loginButton.style.display = 'none';
+                        logoutButton.style.display = 'block';
+                        updateActionButtons(true);
+                    } else {
+                        console.log('Token 验证失败，清除本地存储:', data.message);
+                        localStorage.removeItem('authToken');
+                        isLoggedIn = false;
+                        loginButton.style.display = 'block';
+                        logoutButton.style.display = 'none';
+                        updateActionButtons(false);
+                    }
+                    return data.success;
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('验证 token 失败，清除本地存储:', error);
+                    localStorage.removeItem('authToken');
+                    isLoggedIn = false;
+                    loginButton.style.display = 'block';
+                    logoutButton.style.display = 'none';
+                    updateActionButtons(false);
+                    return false;
+                });
+        } else {
+            console.log('本地存储中无 token，显示未登录状态');
             isLoggedIn = false;
             loginButton.style.display = 'block';
             logoutButton.style.display = 'none';
             updateActionButtons(false);
-          }
-          return data.success;
-        })
-        .catch(error => {
-          hideLoading();
-          console.error('验证 token 失败，清除本地存储:', error);
-          localStorage.removeItem('authToken');
-          isLoggedIn = false;
-          loginButton.style.display = 'block';
-          logoutButton.style.display = 'none';
-          updateActionButtons(false);
-          return false;
-        });
-      } else {
-        console.log('本地存储中无 token，显示未登录状态');
-        isLoggedIn = false;
-        loginButton.style.display = 'block';
-        logoutButton.style.display = 'none';
-        updateActionButtons(false);
-        return Promise.resolve(false);
-      }
+            return Promise.resolve(false);
+        }
     }
 
     function showLoginForm() {
-      document.getElementById('loginOverlay').style.display = 'flex';
-      document.getElementById('username').value = '';
-      document.getElementById('password').value = '';
-      document.getElementById('loginError').style.display = 'none';
-      document.getElementById('username').focus();
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('loginError').style.display = 'none';
+        document.getElementById('username').focus();
     }
 
     function hideLoginForm() {
-      document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('loginOverlay').style.display = 'none';
     }
 
     function login() {
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-      const loginError = document.getElementById('loginError');
-      showLoading();
-      fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password })
-      })
-      .then(response => response.json())
-      .then(data => {
-        hideLoading();
-        if (data.success) {
-          console.log('登录成功，保存 token');
-          localStorage.setItem('authToken', data.token);
-          isLoggedIn = true;
-          hideLoginForm();
-          document.getElementById('loginButton').style.display = 'none';
-          document.getElementById('logoutButton').style.display = 'block';
-          updateActionButtons(true);
-          refreshData(); // 登录成功后刷新数据以显示所有实例包括 private
-        } else {
-          console.log('登录失败:', data.message);
-          loginError.textContent = data.message || '登录失败';
-          loginError.style.display = 'block';
-        }
-      })
-      .catch(error => {
-        hideLoading();
-        console.error('登录请求失败:', error);
-        loginError.textContent = '登录请求失败，请稍后重试';
-        loginError.style.display = 'block';
-      });
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const loginError = document.getElementById('loginError');
+        showLoading();
+        fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({username, password})
+        })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    console.log('登录成功，保存 token');
+                    localStorage.setItem('authToken', data.token);
+                    isLoggedIn = true;
+                    hideLoginForm();
+                    document.getElementById('loginButton').style.display = 'none';
+                    document.getElementById('logoutButton').style.display = 'block';
+                    updateActionButtons(true);
+                    refreshData(); // 登录成功后刷新数据以显示所有实例包括 private
+                } else {
+                    console.log('登录失败:', data.message);
+                    loginError.textContent = data.message || '登录失败';
+                    loginError.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('登录请求失败:', error);
+                loginError.textContent = '登录请求失败，请稍后重试';
+                loginError.style.display = 'block';
+            });
     }
 
     function logout() {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        showLoading();
-        fetch('/api/logout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token })
-        })
-        .then(response => response.json())
-        .then(data => {
-          hideLoading();
-          console.log('登出成功，清除 token');
-          localStorage.removeItem('authToken');
-          isLoggedIn = false;
-          document.getElementById('loginButton').style.display = 'block';
-          document.getElementById('logoutButton').style.display = 'none';
-          updateActionButtons(false);
-          refreshData(); // 登出后刷新数据以隐藏 private 实例
-        })
-        .catch(error => {
-          hideLoading();
-          console.error('登出失败，但仍清除 token:', error);
-          localStorage.removeItem('authToken');
-          isLoggedIn = false;
-          document.getElementById('loginButton').style.display = 'block';
-          document.getElementById('logoutButton').style.display = 'none';
-          updateActionButtons(false);
-          refreshData(); // 登出后刷新数据以隐藏 private 实例
-        });
-      } else {
-        console.log('本地无 token，直接设置为未登录');
-        isLoggedIn = false;
-        document.getElementById('loginButton').style.display = 'block';
-        document.getElementById('logoutButton').style.display = 'none';
-        updateActionButtons(false);
-        refreshData(); // 登出后刷新数据以隐藏 private 实例
-      }
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            showLoading();
+            fetch('/api/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({token})
+            })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    console.log('登出成功，清除 token');
+                    localStorage.removeItem('authToken');
+                    isLoggedIn = false;
+                    document.getElementById('loginButton').style.display = 'block';
+                    document.getElementById('logoutButton').style.display = 'none';
+                    updateActionButtons(false);
+                    refreshData(); // 登出后刷新数据以隐藏 private 实例
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('登出失败，但仍清除 token:', error);
+                    localStorage.removeItem('authToken');
+                    isLoggedIn = false;
+                    document.getElementById('loginButton').style.display = 'block';
+                    document.getElementById('logoutButton').style.display = 'none';
+                    updateActionButtons(false);
+                    refreshData(); // 登出后刷新数据以隐藏 private 实例
+                });
+        } else {
+            console.log('本地无 token，直接设置为未登录');
+            isLoggedIn = false;
+            document.getElementById('loginButton').style.display = 'block';
+            document.getElementById('logoutButton').style.display = 'none';
+            updateActionButtons(false);
+            refreshData(); // 登出后刷新数据以隐藏 private 实例
+        }
     }
 
     function updateActionButtons(loggedIn) {
-      console.log('更新操作按钮状态，是否已登录:', loggedIn);
-      isLoggedIn = loggedIn;
-      const cards = document.querySelectorAll('.server-card');
-      cards.forEach(card => {
-        const buttons = card.querySelector('.action-buttons');
-        if (buttons) {
-          buttons.style.display = loggedIn ? 'flex' : 'none';
-        }
-        // 动态添加或去除 not-logged-in 类以调整卡片高度
-        if (loggedIn) {
-          card.classList.remove('not-logged-in');
-        } else {
-          card.classList.add('not-logged-in');
-        }
-        // 确保图表切换按钮总是可见，不管是否登录
-        const chartToggleButton = card.querySelector('.chart-toggle-button');
-        if (chartToggleButton) {
-          chartToggleButton.style.display = 'inline-block';
-        }
-      });
+        console.log('更新操作按钮状态，是否已登录:', loggedIn);
+        isLoggedIn = loggedIn;
+        const cards = document.querySelectorAll('.server-card');
+        cards.forEach(card => {
+            const buttons = card.querySelector('.action-buttons');
+            if (buttons) {
+                buttons.style.display = loggedIn ? 'flex' : 'none';
+            }
+            // 动态添加或去除 not-logged-in 类以调整卡片高度
+            if (loggedIn) {
+                card.classList.remove('not-logged-in');
+            } else {
+                card.classList.add('not-logged-in');
+            }
+            // 确保图表切换按钮总是可见，不管是否登录
+            const chartToggleButton = card.querySelector('.chart-toggle-button');
+            if (chartToggleButton) {
+                chartToggleButton.style.display = 'inline-block';
+            }
+        });
     }
 
     // 使用 window.onload 确保页面完全加载后检查登录状态
-    window.onload = async function() {
-      console.log('页面加载完成，开始检查登录状态');
-      await checkLoginStatus();
-      console.log('登录状态检查完成，初始化数据');
-      await initialize();
+    window.onload = async function () {
+        console.log('页面加载完成，开始检查登录状态');
+        await checkLoginStatus();
+        console.log('登录状态检查完成，初始化数据');
+        await initialize();
     };
 
     // 二次确认弹窗逻辑
@@ -1002,132 +1147,132 @@
     let pendingRepoId = null;
 
     function showConfirmDialog(action, repoId, title, message) {
-      pendingAction = action;
-      pendingRepoId = repoId;
-      document.getElementById('confirmTitle').textContent = title;
-      document.getElementById('confirmMessage').textContent = message;
-      document.getElementById('confirmOverlay').style.display = 'flex';
+        pendingAction = action;
+        pendingRepoId = repoId;
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmMessage').textContent = message;
+        document.getElementById('confirmOverlay').style.display = 'flex';
     }
 
     function confirmAction() {
-      if (pendingAction === 'restart') {
-        restartSpace(pendingRepoId);
-      } else if (pendingAction === 'rebuild') {
-        rebuildSpace(pendingRepoId);
-      }
-      cancelAction();
+        if (pendingAction === 'restart') {
+            restartSpace(pendingRepoId);
+        } else if (pendingAction === 'rebuild') {
+            rebuildSpace(pendingRepoId);
+        }
+        cancelAction();
     }
 
     function cancelAction() {
-      pendingAction = null;
-      pendingRepoId = null;
-      document.getElementById('confirmOverlay').style.display = 'none';
+        pendingAction = null;
+        pendingRepoId = null;
+        document.getElementById('confirmOverlay').style.display = 'none';
     }
 
     async function getUsernames() {
-      try {
-        showLoading();
-        const token = localStorage.getItem('authToken');
-        const headers = {};
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-          console.log('getUsernames 请求中附加 Token:', token.slice(0, 8) + '...');
+        try {
+            showLoading();
+            const token = localStorage.getItem('authToken');
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+                console.log('getUsernames 请求中附加 Token:', token.slice(0, 8) + '...');
+            }
+            const response = await fetch('/api/config', {headers});
+            const config = await response.json();
+            hideLoading();
+            const usernamesList = config.usernames ? config.usernames.split(',').map(name => name.trim()).filter(name => name) : [];
+            document.getElementById('totalUsers').textContent = usernamesList.length;
+            // 更新用户过滤下拉菜单
+            const userFilter = document.getElementById('userFilter');
+            userFilter.innerHTML = '<option value="all">全部用户</option>';
+            usernamesList.forEach(username => {
+                const option = document.createElement('option');
+                option.value = username;
+                option.textContent = username;
+                userFilter.appendChild(option);
+            });
+            return usernamesList;
+        } catch (error) {
+            hideLoading();
+            console.error('Failed to fetch usernames:', error);
+            document.getElementById('totalUsers').textContent = 0;
+            return [];
         }
-        const response = await fetch('/api/config', { headers });
-        const config = await response.json();
-        hideLoading();
-        const usernamesList = config.usernames ? config.usernames.split(',').map(name => name.trim()).filter(name => name) : [];
-        document.getElementById('totalUsers').textContent = usernamesList.length;
-        // 更新用户过滤下拉菜单
-        const userFilter = document.getElementById('userFilter');
-        userFilter.innerHTML = '<option value="all">全部用户</option>';
-        usernamesList.forEach(username => {
-          const option = document.createElement('option');
-          option.value = username;
-          option.textContent = username;
-          userFilter.appendChild(option);
-        });
-        return usernamesList;
-      } catch (error) {
-        hideLoading();
-        console.error('Failed to fetch usernames:', error);
-        document.getElementById('totalUsers').textContent = 0;
-        return [];
-      }
     }
 
     async function fetchInstances() {
-      try {
-        showLoading();
-        const token = localStorage.getItem('authToken');
-        const headers = {};
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-          console.log('fetchInstances 请求中附加 Token:', token.slice(0, 8) + '...');
-        } else {
-          console.log('无可用 Token，未附加 Authorization 头');
+        try {
+            showLoading();
+            const token = localStorage.getItem('authToken');
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+                console.log('fetchInstances 请求中附加 Token:', token.slice(0, 8) + '...');
+            } else {
+                console.log('无可用 Token，未附加 Authorization 头');
+            }
+            const response = await fetch('/api/proxy/spaces', {headers});
+            const instances = await response.json();
+            console.log('从后端获取的实例列表:', instances);
+            hideLoading();
+            if (instances.length === 0) {
+                alert('未获取到实例数据，可能是网络问题或数据暂不可用。');
+            }
+            return instances;
+        } catch (error) {
+            hideLoading();
+            console.error("获取实例列表失败：", error);
+            alert('获取实例列表失败，请稍后重试。');
+            return [];
         }
-        const response = await fetch('/api/proxy/spaces', { headers });
-        const instances = await response.json();
-        console.log('从后端获取的实例列表:', instances);
-        hideLoading();
-        if (instances.length === 0) {
-          alert('未获取到实例数据，可能是网络问题或数据暂不可用。');
-        }
-        return instances;
-      } catch (error) {
-        hideLoading();
-        console.error("获取实例列表失败：", error);
-        alert('获取实例列表失败，请稍后重试。');
-        return [];
-      }
     }
 
     class MetricsStreamManager {
-      constructor() {
-        this.eventSource = null;
-      }
-
-      connect(subscribedInstances = []) {
-        if (this.eventSource) {
-          this.eventSource.close();
+        constructor() {
+            this.eventSource = null;
         }
 
-        const instancesParam = subscribedInstances.join(',');
-        const token = localStorage.getItem('authToken');
-        // 由于 EventSource 不支持直接设置 Authorization 头，这里通过查询参数传递 token
-        const url = `/api/proxy/live-metrics-stream?instances=${encodeURIComponent(instancesParam)}&token=${encodeURIComponent(token || '')}`;
-        console.log('SSE 连接 URL:', url.split('&token=')[0] + (token ? '&token=... (隐藏)' : '&token=空'));
-        this.eventSource = new EventSource(url);
+        connect(subscribedInstances = []) {
+            if (this.eventSource) {
+                this.eventSource.close();
+            }
 
-        this.eventSource.addEventListener("metric", (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            const { repoId, metrics } = data;
-            updateServerCard(metrics, repoId);
-          } catch (error) {
-            console.error(`解析监控数据失败:`, error);
-          }
-        });
+            const instancesParam = subscribedInstances.join(',');
+            const token = localStorage.getItem('authToken');
+            // 由于 EventSource 不支持直接设置 Authorization 头，这里通过查询参数传递 token
+            const url = `/api/proxy/live-metrics-stream?instances=${encodeURIComponent(instancesParam)}&token=${encodeURIComponent(token || '')}`;
+            console.log('SSE 连接 URL:', url.split('&token=')[0] + (token ? '&token=... (隐藏)' : '&token=空'));
+            this.eventSource = new EventSource(url);
 
-        this.eventSource.onerror = (error) => {
-          console.error(`SSE 连接错误:`, error);
-          this.eventSource.close();
-          this.eventSource = null;
-          // 可选：尝试重新连接
-          setTimeout(() => this.connect(subscribedInstances), 5000);
-        };
+            this.eventSource.addEventListener("metric", (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    const {repoId, metrics} = data;
+                    updateServerCard(metrics, repoId);
+                } catch (error) {
+                    console.error(`解析监控数据失败:`, error);
+                }
+            });
 
-        console.log(`SSE 连接已建立，订阅实例: ${instancesParam || '无'}`);
-      }
+            this.eventSource.onerror = (error) => {
+                console.error(`SSE 连接错误:`, error);
+                this.eventSource.close();
+                this.eventSource = null;
+                // 可选：尝试重新连接
+                setTimeout(() => this.connect(subscribedInstances), 5000);
+            };
 
-      disconnect() {
-        if (this.eventSource) {
-          this.eventSource.close();
-          this.eventSource = null;
-          console.log(`SSE 连接已断开`);
+            console.log(`SSE 连接已建立，订阅实例: ${instancesParam || '无'}`);
         }
-      }
+
+        disconnect() {
+            if (this.eventSource) {
+                this.eventSource.close();
+                this.eventSource = null;
+                console.log(`SSE 连接已断开`);
+            }
+        }
     }
 
     const metricsStreamManager = new MetricsStreamManager();
@@ -1138,307 +1283,305 @@
     const chartDataBuffer = new Map(); // 存储图表数据缓冲以减少更新频率
 
     async function initialize() {
-      await getUsernames();
-      const instances = await fetchInstances();
-      allInstances = instances;
-      renderInstances(allInstances);
-      
-      // 默认只监控状态为 running 的实例
-      const runningInstances = instances
-        .filter(instance => instance.status.toLowerCase() === 'running')
-        .map(instance => instance.repo_id);
-      
-      metricsStreamManager.connect(runningInstances);
-      
-      updateSummary();
-      updateActionButtons(isLoggedIn);
+        await getUsernames();
+        const instances = await fetchInstances();
+        allInstances = instances;
+        renderInstances(allInstances);
+
+        // 默认只监控状态为 running 的实例
+        const runningInstances = instances
+            .filter(instance => instance.status.toLowerCase() === 'running')
+            .map(instance => instance.repo_id);
+
+        metricsStreamManager.connect(runningInstances);
+
+        updateSummary();
+        updateActionButtons(isLoggedIn);
     }
 
     // 手动刷新数据函数
     async function refreshData() {
-      metricsStreamManager.disconnect();
-      // 销毁所有图表实例
-      chartInstances.forEach(chart => {
-        if (chart) {
-          chart.destroy();
-        }
-      });
-      chartInstances.clear();
-      chartDataBuffer.clear();
-      await initialize();
-      applyFiltersAndSort(); // 确保刷新后重新应用过滤和排序
+        metricsStreamManager.disconnect();
+        // 销毁所有图表实例
+        chartInstances.forEach(chart => {
+            if (chart) {
+                chart.destroy();
+            }
+        });
+        chartInstances.clear();
+        chartDataBuffer.clear();
+        await initialize();
+        applyFiltersAndSort(); // 确保刷新后重新应用过滤和排序
     }
 
     function renderInstances(instances) {
-      const serversContainer = document.getElementById('servers');
-      serversContainer.innerHTML = ''; // 清空现有内容
-      const userGroups = {};
+        const serversContainer = document.getElementById('servers');
+        serversContainer.innerHTML = ''; // 清空现有内容
+        const userGroups = {};
 
-      // 按用户分组
-      instances.forEach(instance => {
-        if (!userGroups[instance.owner]) {
-          userGroups[instance.owner] = [];
-        }
-        userGroups[instance.owner].push(instance);
-      });
-
-      // 渲染每个用户组
-      Object.keys(userGroups).forEach(owner => {
-        let userGroup = document.createElement('details');
-        userGroup.className = 'user-group';
-        userGroup.id = `user-${owner}`;
-        userGroup.setAttribute('open', '');
-        
-        const summary = document.createElement('summary');
-        summary.textContent = `用户: ${owner}`;
-        userGroup.appendChild(summary);
-        
-        const userServers = document.createElement('div');
-        userServers.className = 'user-servers';
-        userGroup.appendChild(userServers);
-        
-        serversContainer.appendChild(userGroup);
-
-        // 渲染该用户下的实例
-        userGroups[owner].forEach(instance => {
-          renderInstanceCard(instance, userServers);
+        // 按用户分组
+        instances.forEach(instance => {
+            if (!userGroups[instance.owner]) {
+                userGroups[instance.owner] = [];
+            }
+            userGroups[instance.owner].push(instance);
         });
-      });
+
+        // 渲染每个用户组
+        Object.keys(userGroups).forEach(owner => {
+            let userGroup = document.createElement('details');
+            userGroup.className = 'user-group';
+            userGroup.id = `user-${owner}`;
+            userGroup.setAttribute('open', '');
+
+            const summary = document.createElement('summary');
+            summary.textContent = `用户: ${owner}`;
+            userGroup.appendChild(summary);
+
+            const userServers = document.createElement('div');
+            userServers.className = 'user-servers';
+            userGroup.appendChild(userServers);
+
+            serversContainer.appendChild(userGroup);
+
+            // 渲染该用户下的实例
+            userGroups[owner].forEach(instance => {
+                renderInstanceCard(instance, userServers);
+            });
+        });
     }
 
     // 图表配置函数
     function createChart(instanceId) {
-      const canvasId = `chart-${instanceId}`;
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) return null;
+        const canvasId = `chart-${instanceId}`;
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return null;
 
-      const gridColor = 'rgba(0, 212, 255, 0.1)';
-      const textColor = '#E0E0FF';
-      const cpuColor = '#00FFAA';
-      const memoryColor = '#00D4FF';
-      const uploadColor = '#FF9500';
-      const downloadColor = '#FF00FF';
+        const gridColor = 'rgba(0, 212, 255, 0.1)';
+        const textColor = '#E0E0FF';
+        const cpuColor = '#00FFAA';
+        const memoryColor = '#00D4FF';
+        const uploadColor = '#FF9500';
+        const downloadColor = '#FF00FF';
 
-      const ctx = canvas.getContext('2d');
-      const chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: Array(30).fill(''), // 初始为空标签，最多30个数据点
-          datasets: [
-            {
-              label: 'CPU 使用率 (%)',
-              data: [],
-              borderColor: cpuColor,
-              backgroundColor: 'rgba(0, 255, 170, 0.2)',
-              tension: 0.4,
-              fill: true,
+        const ctx = canvas.getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array(30).fill(''), // 初始为空标签，最多30个数据点
+                datasets: [
+                    {
+                        label: 'CPU 使用率 (%)',
+                        data: [],
+                        borderColor: cpuColor,
+                        backgroundColor: 'rgba(0, 255, 170, 0.2)',
+                        tension: 0.4,
+                        fill: true,
+                    },
+                    {
+                        label: '内存使用率 (%)',
+                        data: [],
+                        borderColor: memoryColor,
+                        backgroundColor: 'rgba(0, 212, 255, 0.2)',
+                        tension: 0.4,
+                        fill: true,
+                    },
+                    {
+                        label: '上传速度 (KB/s)',
+                        data: [],
+                        borderColor: uploadColor,
+                        backgroundColor: 'rgba(255, 149, 0, 0.2)',
+                        tension: 0.4,
+                        fill: true,
+                    },
+                    {
+                        label: '下载速度 (KB/s)',
+                        data: [],
+                        borderColor: downloadColor,
+                        backgroundColor: 'rgba(255, 0, 255, 0.2)',
+                        tension: 0.4,
+                        fill: true,
+                    },
+                ]
             },
-            {
-              label: '内存使用率 (%)',
-              data: [],
-              borderColor: memoryColor,
-              backgroundColor: 'rgba(0, 212, 255, 0.2)',
-              tension: 0.4,
-              fill: true,
-            },
-            {
-              label: '上传速度 (KB/s)',
-              data: [],
-              borderColor: uploadColor,
-              backgroundColor: 'rgba(255, 149, 0, 0.2)',
-              tension: 0.4,
-              fill: true,
-            },
-            {
-              label: '下载速度 (KB/s)',
-              data: [],
-              borderColor: downloadColor,
-              backgroundColor: 'rgba(255, 0, 255, 0.2)',
-              tension: 0.4,
-              fill: true,
-            },
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: {
-                color: textColor,
-                font: { size: 12, family: "'Orbitron', sans-serif" }
-              }
-            },
-            tooltip: {
-              mode: 'index',
-              intersect: false,
-              backgroundColor: 'rgba(20, 20, 40, 0.9)',
-              titleColor: textColor,
-              bodyColor: textColor,
-              padding: 12,
-              boxPadding: 8,
-              borderRadius: 6,
-              borderWidth: 1,
-              borderColor: 'rgba(0, 212, 255, 0.3)'
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: textColor,
+                            font: {size: 12, family: "'Orbitron', sans-serif"}
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(20, 20, 40, 0.9)',
+                        titleColor: textColor,
+                        bodyColor: textColor,
+                        padding: 12,
+                        boxPadding: 8,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: 'rgba(0, 212, 255, 0.3)'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {color: gridColor, drawTicks: false},
+                        ticks: {
+                            color: textColor,
+                            font: {size: 11, family: "'Orbitron', sans-serif"}
+                        }
+                    },
+                    x: {
+                        grid: {color: gridColor, drawTicks: false},
+                        ticks: {
+                            color: textColor,
+                            font: {size: 11, family: "'Orbitron', sans-serif"},
+                            maxRotation: 0,
+                            minRotation: 0,
+                            autoSkip: true,
+                            autoSkipPadding: 10
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: 0, // 隐藏数据点
+                        hitRadius: 5 // 确保悬停仍有效
+                    },
+                    line: {
+                        borderWidth: 2
+                    }
+                },
+                animation: false // 禁用图表动画，减少性能开销
             }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: { color: gridColor, drawTicks: false },
-              ticks: {
-                color: textColor,
-                font: { size: 11, family: "'Orbitron', sans-serif" }
-              }
-            },
-            x: {
-              grid: { color: gridColor, drawTicks: false },
-              ticks: {
-                color: textColor,
-                font: { size: 11, family: "'Orbitron', sans-serif" },
-                maxRotation: 0,
-                minRotation: 0,
-                autoSkip: true,
-                autoSkipPadding: 10
-              }
-            }
-          },
-          elements: {
-            point: {
-              radius: 0, // 隐藏数据点
-              hitRadius: 5 // 确保悬停仍有效
-            },
-            line: {
-              borderWidth: 2
-            }
-          },
-          animation: false // 禁用图表动画，减少性能开销
-        }
-      });
-      chartInstances.set(instanceId, chart);
-      return chart;
+        });
+        chartInstances.set(instanceId, chart);
+        return chart;
     }
 
     // 更新图表数据，带有缓冲机制减少更新频率
     function updateChart(instanceId, data) {
-      let buffer = chartDataBuffer.get(instanceId) || { data: [], count: 0 };
-      buffer.data.push(data);
-      buffer.count++;
+        let buffer = chartDataBuffer.get(instanceId) || {data: [], count: 0};
+        buffer.data.push(data);
+        buffer.count++;
 
-      if (buffer.count < 2) { // 每 2 次数据更新才渲染一次
-        chartDataBuffer.set(instanceId, buffer);
-        return;
-      }
+        if (buffer.count < 2) { // 每 2 次数据更新才渲染一次
+            chartDataBuffer.set(instanceId, buffer);
+            return;
+        }
 
-      let chart = chartInstances.get(instanceId);
-      if (!chart) {
-        chart = createChart(instanceId);
-        if (!chart) return;
-      }
+        let chart = chartInstances.get(instanceId);
+        if (!chart) {
+            chart = createChart(instanceId);
+            if (!chart) return;
+        }
 
-      // 获取当前数据集
-      const cpuData = chart.data.datasets[0].data;
-      const memoryData = chart.data.datasets[1].data;
-      const uploadData = chart.data.datasets[2].data;
-      const downloadData = chart.data.datasets[3].data;
+        // 获取当前数据集
+        const cpuData = chart.data.datasets[0].data;
+        const memoryData = chart.data.datasets[1].data;
+        const uploadData = chart.data.datasets[2].data;
+        const downloadData = chart.data.datasets[3].data;
 
-      // 追加最新数据
-      const latestData = buffer.data[buffer.data.length - 1];
-      cpuData.push(latestData.cpu_usage_pct);
-      memoryData.push(((latestData.memory_used_bytes / latestData.memory_total_bytes) * 100).toFixed(2));
-      uploadData.push((latestData.tx_bps / 1024).toFixed(2)); // 转换为 KB/s
-      downloadData.push((latestData.rx_bps / 1024).toFixed(2)); // 转换为 KB/s
+        // 追加最新数据
+        const latestData = buffer.data[buffer.data.length - 1];
+        cpuData.push(latestData.cpu_usage_pct);
+        memoryData.push(((latestData.memory_used_bytes / latestData.memory_total_bytes) * 100).toFixed(2));
+        uploadData.push((latestData.tx_bps / 1024).toFixed(2)); // 转换为 KB/s
+        downloadData.push((latestData.rx_bps / 1024).toFixed(2)); // 转换为 KB/s
 
-      // 限制数据点数量为 30 个
-      if (cpuData.length > 30) {
-        cpuData.shift();
-        memoryData.shift();
-        uploadData.shift();
-        downloadData.shift();
-      }
+        // 限制数据点数量为 30 个
+        if (cpuData.length > 30) {
+            cpuData.shift();
+            memoryData.shift();
+            uploadData.shift();
+            downloadData.shift();
+        }
 
-      // 更新图表
-      chart.update();
-      
-      // 清空缓冲
-      chartDataBuffer.set(instanceId, { data: [], count: 0 });
+        // 更新图表
+        chart.update();
+
+        // 清空缓冲
+        chartDataBuffer.set(instanceId, {data: [], count: 0});
     }
 
     // 计算相对时间的辅助函数
     function formatRelativeTime(dateStr) {
-      if (!dateStr) return '未知时间';
-      try {
-        const date = new Date(dateStr);
-        const now = new Date();
-        const diffMs = now - date;
-        const diffSecs = Math.floor(diffMs / 1000);
-        const diffMins = Math.floor(diffSecs / 60);
-        const diffHrs = Math.floor(diffMins / 60);
-        const diffDays = Math.floor(diffHrs / 24);
+        if (!dateStr) return '未知时间';
+        try {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSecs = Math.floor(diffMs / 1000);
+            const diffMins = Math.floor(diffSecs / 60);
+            const diffHrs = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHrs / 24);
 
-        if (diffDays > 7) {
-          return date.toLocaleDateString(); // 超过7天显示日期
-        } else if (diffDays > 0) {
-          return `${diffDays}天前`;
-        } else if (diffHrs > 0) {
-          return `${diffHrs}小时前`;
-        } else if (diffMins > 0) {
-          return `${diffMins}分钟前`;
-        } else {
-          return '刚刚';
+            if (diffDays > 7) {
+                return date.toLocaleDateString(); // 超过7天显示日期
+            } else if (diffDays > 0) {
+                return `${diffDays}天前`;
+            } else if (diffHrs > 0) {
+                return `${diffHrs}小时前`;
+            } else if (diffMins > 0) {
+                return `${diffMins}分钟前`;
+            } else {
+                return '刚刚';
+            }
+        } catch (error) {
+            console.error('时间格式化失败:', error);
+            return '未知时间';
         }
-      } catch (error) {
-        console.error('时间格式化失败:', error);
-        return '未知时间';
-      }
-    }
-
-    // 切换信息块显示/隐藏的函数
-    function toggleInfoBlock(instanceId) {
-      const card = document.getElementById(`instance-${instanceId}`);
-      if (!card) return;
-
-      card.classList.toggle('info-expanded');
     }
 
     function renderInstanceCard(instance, container) {
-      const instanceId = instance.repo_id;
-      instanceMap.set(instanceId, instance);
+        const instanceId = instance.repo_id;
+        instanceMap.set(instanceId, instance);
 
-      const cardId = `instance-${instanceId}`;
-      let card = document.getElementById(cardId);
-      if (!card) {
-        card = document.createElement('div');
-        card.id = cardId;
-        card.className = 'server-card';
-        if (!isLoggedIn) {
-          card.classList.add('not-logged-in'); // 未登录时添加类以调整高度
-        }
-        // 根据 instance.private 属性选择不同的图标
-        const iconSvg = instance.private 
-          ? `<svg class="server-flag" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        const cardId = `instance-${instanceId}`;
+        let card = document.getElementById(cardId);
+        if (!card) {
+            card = document.createElement('div');
+            card.id = cardId;
+            card.className = 'server-card';
+            if (!isLoggedIn) {
+                card.classList.add('not-logged-in'); // 未登录时添加类以调整高度
+            }
+            // 根据 instance.private 属性选择不同的图标
+            const iconSvg = instance.private
+                ? `<svg class="server-flag" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18 8v-3c0-1.656-1.344-3-3-3h-6c-1.656 0-3 1.344-3 3v3h-3v14h18v-14h-3zm-10-1.5c0-.828.672-1.5 1.5-1.5h5c.828 0 1.5.672 1.5 1.5v2.5h-8v-2.5zm4 11.5c-1.105 0-2-.895-2-2s.895-2 2-2 2 .895 2 2-.895 2-2 2z"/>
             </svg>` // 锁图标，表示 private 实例
-          : `<svg class="server-flag" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                : `<svg class="server-flag" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                <path d="M21 3H3C1.9 3 1 3.9 1 5v3c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 5H4V6h16v2zm1 4H3c-1.1 0-2 .9-2 2v3c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2v-3c0-1.1-.9-2-2-2zm-1 5H4v-2h16v2zm1 4H3c-1.1 0-2 .9-2 2v3c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2v-3c0-1.1-.9-2-2-2zm-1 5H4v-2h16v2z"/>
             </svg>`; // 服务器图标，表示非 private 实例
-        
-        // 处理 short_description，默认值“暂无描述”
-        const description = instance.short_description && instance.short_description.trim() ? instance.short_description : 'N/A';
-        // 处理 last_modified，格式化为相对时间
-        const lastModified = formatRelativeTime(instance.last_modified);
 
-        card.innerHTML = `
+            // 处理 short_description，默认值“暂无描述”
+            const description = instance.short_description && instance.short_description.trim() ? instance.short_description : 'N/A';
+            // 处理 last_modified，格式化为相对时间
+            const lastModified = formatRelativeTime(instance.last_modified);
+
+            card.innerHTML = `
           <div class="server-header">
-            <div class="server-name" onclick="toggleInfoBlock('${instanceId}')">
+            <div class="server-name">
               <div class="status-dot status-sleep"></div>
               ${iconSvg}
               <div>${instance.name}</div>
             </div>
-            <div>
+
+            <div class="server-actions">
               <button class="chart-toggle-button" onclick="toggleChart('${instanceId}')">查看图表</button>
             </div>
           </div>
+          <div class="desc">
+          <div class="server-description" title="${description}">${description}</div>
+                        <div class="last-modified">更新: ${lastModified}</div>
+
+</div>
           <div class="metric-grid">
             <div class="metric-item">
               <div class="metric-label">状态</div>
@@ -1461,16 +1604,6 @@
               <div class="metric-value download">N/A</div>
             </div>
           </div>
-          <div class="info-block">
-            <div class="info-item">
-              <div class="info-label">描述</div>
-              <div class="info-value" title="${description}">${description}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">最近更新</div>
-              <div class="info-value">${lastModified}</div>
-            </div>
-          </div>
           <div class="action-buttons" style="display: ${isLoggedIn ? 'flex' : 'none'};">
             <button class="action-button view-button" onclick="viewInstance('${instance.url}')">查看</button>
             <button class="action-button" onclick="manageInstance('${instance.repo_id}')">管理</button>
@@ -1481,284 +1614,296 @@
             <canvas id="chart-${instanceId}"></canvas>
           </div>
         `;
-        container.appendChild(card);
-      }
-      const statusDot = card.querySelector('.status-dot');
-      const initialStatus = instance.status.toLowerCase();
-      if (initialStatus === 'running') {
-        statusDot.className = 'status-dot status-online';
-      } else if (initialStatus === 'sleeping') {
-        statusDot.className = 'status-dot status-sleep';
-      } else {
-        statusDot.className = 'status-dot status-offline';
-      }
-      serverStatus.set(instanceId, { lastSeen: Date.now(), isOnline: initialStatus === 'running', isSleep: initialStatus === 'sleeping', data: null, status: instance.status });
+            container.appendChild(card);
+        }
+        const statusDot = card.querySelector('.status-dot');
+        const initialStatus = instance.status.toLowerCase();
+        if (initialStatus === 'running') {
+            statusDot.className = 'status-dot status-online';
+        } else if (initialStatus === 'sleeping') {
+            statusDot.className = 'status-dot status-sleep';
+        } else {
+            statusDot.className = 'status-dot status-offline';
+        }
+        serverStatus.set(instanceId, {
+            lastSeen: Date.now(),
+            isOnline: initialStatus === 'running',
+            isSleep: initialStatus === 'sleeping',
+            data: null,
+            status: instance.status
+        });
     }
 
     // 切换图表显示/隐藏
     function toggleChart(instanceId) {
-      const card = document.getElementById(`instance-${instanceId}`);
-      const chartContainer = document.getElementById(`chart-container-${instanceId}`);
-      const toggleButton = card.querySelector('.chart-toggle-button');
-      if (!card || !chartContainer) return;
+        const card = document.getElementById(`instance-${instanceId}`);
+        const chartContainer = document.getElementById(`chart-container-${instanceId}`);
+        const toggleButton = card.querySelector('.chart-toggle-button');
+        if (!card || !chartContainer) return;
 
-      if (card.classList.contains('expanded')) {
-        card.classList.remove('expanded');
-        toggleButton.textContent = '查看图表';
-      } else {
-        card.classList.add('expanded');
-        toggleButton.textContent = '收起图表';
-        // 如果图表未初始化，则创建
-        if (!chartInstances.has(instanceId)) {
-          createChart(instanceId);
+        if (card.classList.contains('expanded')) {
+            card.classList.remove('expanded');
+            toggleButton.textContent = '查看图表';
+        } else {
+            card.classList.add('expanded');
+            toggleButton.textContent = '收起图表';
+            // 如果图表未初始化，则创建
+            if (!chartInstances.has(instanceId)) {
+                createChart(instanceId);
+            }
         }
-      }
     }
 
     function updateServerCard(data, instanceId, isSleep = false) {
-      const cardId = `instance-${instanceId}`;
-      let card = document.getElementById(cardId);
-      const instance = instanceMap.get(instanceId);
-      
-      if (!card && instance) {
-        // 如果卡片不存在，但实例存在，说明可能被过滤掉了，不渲染
-        return;
-      }
+        const cardId = `instance-${instanceId}`;
+        let card = document.getElementById(cardId);
+        const instance = instanceMap.get(instanceId);
 
-      if (card) {
-        const statusDot = card.querySelector('.status-dot');
-        let upload = 'N/A', download = 'N/A', cpuUsage = 'N/A', memoryUsage = 'N/A';
-        let isOnline = false;
-
-        if (data) {
-          cpuUsage = `${data.cpu_usage_pct}%`;
-          memoryUsage = `${((data.memory_used_bytes / data.memory_total_bytes) * 100).toFixed(2)}%`;
-          upload = `${formatBytes(data.tx_bps)}/s`;
-          download = `${formatBytes(data.rx_bps)}/s`;
-          statusDot.className = 'status-dot status-online';
-          isOnline = true;
-          isSleep = false;
-          // 更新图表数据
-          updateChart(instanceId, data);
-        } else {
-          const currentStatus = instance?.status.toLowerCase() || 'unknown';
-          if (currentStatus === 'running') {
-            statusDot.className = 'status-dot status-online';
-            isOnline = true;
-            isSleep = false;
-          } else if (currentStatus === 'sleeping') {
-            statusDot.className = 'status-dot status-sleep';
-            isOnline = false;
-            isSleep = true;
-          } else {
-            statusDot.className = 'status-dot status-offline';
-            isOnline = false;
-            isSleep = false;
-          }
+        if (!card && instance) {
+            // 如果卡片不存在，但实例存在，说明可能被过滤掉了，不渲染
+            return;
         }
 
-        card.querySelector('.cpu-usage').textContent = cpuUsage;
-        card.querySelector('.memory-usage').textContent = memoryUsage;
-        card.querySelector('.upload').textContent = upload;
-        card.querySelector('.download').textContent = download;
+        if (card) {
+            const statusDot = card.querySelector('.status-dot');
+            let upload = 'N/A', download = 'N/A', cpuUsage = 'N/A', memoryUsage = 'N/A';
+            let isOnline = false;
 
-        serverStatus.set(instanceId, { lastSeen: Date.now(), isOnline, isSleep, data: data || null, status: instance?.status || 'unknown' });
-        updateSummary();
-      }
+            if (data) {
+                cpuUsage = `${data.cpu_usage_pct}%`;
+                memoryUsage = `${((data.memory_used_bytes / data.memory_total_bytes) * 100).toFixed(2)}%`;
+                upload = `${formatBytes(data.tx_bps)}/s`;
+                download = `${formatBytes(data.rx_bps)}/s`;
+                statusDot.className = 'status-dot status-online';
+                isOnline = true;
+                isSleep = false;
+                // 更新图表数据
+                updateChart(instanceId, data);
+            } else {
+                const currentStatus = instance?.status.toLowerCase() || 'unknown';
+                if (currentStatus === 'running') {
+                    statusDot.className = 'status-dot status-online';
+                    isOnline = true;
+                    isSleep = false;
+                } else if (currentStatus === 'sleeping') {
+                    statusDot.className = 'status-dot status-sleep';
+                    isOnline = false;
+                    isSleep = true;
+                } else {
+                    statusDot.className = 'status-dot status-offline';
+                    isOnline = false;
+                    isSleep = false;
+                }
+            }
+
+            card.querySelector('.cpu-usage').textContent = cpuUsage;
+            card.querySelector('.memory-usage').textContent = memoryUsage;
+            card.querySelector('.upload').textContent = upload;
+            card.querySelector('.download').textContent = download;
+
+            serverStatus.set(instanceId, {
+                lastSeen: Date.now(),
+                isOnline,
+                isSleep,
+                data: data || null,
+                status: instance?.status || 'unknown'
+            });
+            updateSummary();
+        }
     }
 
     async function restartSpace(repoId) {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token || !isLoggedIn) {
-          alert('请先登录以执行此操作');
-          showLoginForm();
-          return;
+        try {
+            const token = localStorage.getItem('authToken');
+            if (!token || !isLoggedIn) {
+                alert('请先登录以执行此操作');
+                showLoginForm();
+                return;
+            }
+            showLoading();
+            const encodedRepoId = encodeURIComponent(repoId);
+            const response = await fetch(`/api/proxy/restart/${encodedRepoId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const result = await response.json();
+            hideLoading();
+            if (result.success) {
+                alert(`重启成功: ${repoId}`);
+                // 操作成功后立即刷新数据
+                refreshData();
+            } else {
+                if (response.status === 401) {
+                    alert('登录已过期，请重新登录');
+                    localStorage.removeItem('authToken');
+                    isLoggedIn = false;
+                    document.getElementById('loginButton').style.display = 'block';
+                    document.getElementById('logoutButton').style.display = 'none';
+                    updateActionButtons(false);
+                    showLoginForm();
+                } else {
+                    alert(`重启失败: ${result.error || '未知错误'}`);
+                    console.error(`重启失败 (${repoId}):`, result.error, result.details);
+                }
+            }
+        } catch (error) {
+            hideLoading();
+            console.error(`重启失败 (${repoId}):`, error);
+            alert(`重启失败: ${error.message}`);
         }
-        showLoading();
-        const encodedRepoId = encodeURIComponent(repoId);
-        const response = await fetch(`/api/proxy/restart/${encodedRepoId}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const result = await response.json();
-        hideLoading();
-        if (result.success) {
-          alert(`重启成功: ${repoId}`);
-          // 操作成功后立即刷新数据
-          refreshData();
-        } else {
-          if (response.status === 401) {
-            alert('登录已过期，请重新登录');
-            localStorage.removeItem('authToken');
-            isLoggedIn = false;
-            document.getElementById('loginButton').style.display = 'block';
-            document.getElementById('logoutButton').style.display = 'none';
-            updateActionButtons(false);
-            showLoginForm();
-          } else {
-            alert(`重启失败: ${result.error || '未知错误'}`);
-            console.error(`重启失败 (${repoId}):`, result.error, result.details);
-          }
-        }
-      } catch (error) {
-        hideLoading();
-        console.error(`重启失败 (${repoId}):`, error);
-        alert(`重启失败: ${error.message}`);
-      }
     }
 
     async function rebuildSpace(repoId) {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token || !isLoggedIn) {
-          alert('请先登录以执行此操作');
-          showLoginForm();
-          return;
+        try {
+            const token = localStorage.getItem('authToken');
+            if (!token || !isLoggedIn) {
+                alert('请先登录以执行此操作');
+                showLoginForm();
+                return;
+            }
+            showLoading();
+            const encodedRepoId = encodeURIComponent(repoId);
+            const response = await fetch(`/api/proxy/rebuild/${encodedRepoId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const result = await response.json();
+            hideLoading();
+            if (result.success) {
+                alert(`重建成功: ${repoId}`);
+                // 操作成功后立即刷新数据
+                refreshData();
+            } else {
+                if (response.status === 401) {
+                    alert('登录已过期，请重新登录');
+                    localStorage.removeItem('authToken');
+                    isLoggedIn = false;
+                    document.getElementById('loginButton').style.display = 'block';
+                    document.getElementById('logoutButton').style.display = 'none';
+                    updateActionButtons(false);
+                    showLoginForm();
+                } else {
+                    alert(`重建失败: ${result.error || '未知错误'}`);
+                    console.error(`重建失败 (${repoId}):`, result.error, result.details);
+                }
+            }
+        } catch (error) {
+            hideLoading();
+            console.error(`重建失败 (${repoId}):`, error);
+            alert(`重建失败: ${error.message}`);
         }
-        showLoading();
-        const encodedRepoId = encodeURIComponent(repoId);
-        const response = await fetch(`/api/proxy/rebuild/${encodedRepoId}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const result = await response.json();
-        hideLoading();
-        if (result.success) {
-          alert(`重建成功: ${repoId}`);
-          // 操作成功后立即刷新数据
-          refreshData();
-        } else {
-          if (response.status === 401) {
-            alert('登录已过期，请重新登录');
-            localStorage.removeItem('authToken');
-            isLoggedIn = false;
-            document.getElementById('loginButton').style.display = 'block';
-            document.getElementById('logoutButton').style.display = 'none';
-            updateActionButtons(false);
-            showLoginForm();
-          } else {
-            alert(`重建失败: ${result.error || '未知错误'}`);
-            console.error(`重建失败 (${repoId}):`, result.error, result.details);
-          }
-        }
-      } catch (error) {
-        hideLoading();
-        console.error(`重建失败 (${repoId}):`, error);
-        alert(`重建失败: ${error.message}`);
-      }
     }
 
     function updateSummary() {
-      let online = 0;
-      let offline = 0;
-      let totalUpload = 0;
-      let totalDownload = 0;
+        let online = 0;
+        let offline = 0;
+        let totalUpload = 0;
+        let totalDownload = 0;
 
-      serverStatus.forEach((status, instanceId) => {
-        const isRecentlyOnline = status.isOnline || status.status.toLowerCase() === 'running';
-        if (isRecentlyOnline) {
-          online++;
-          if (status.data) {
-            totalUpload += parseFloat(status.data.tx_bps) || 0;
-            totalDownload += parseFloat(status.data.rx_bps) || 0;
-          }
-        } else {
-          offline++;
-        }
-      });
+        serverStatus.forEach((status, instanceId) => {
+            const isRecentlyOnline = status.isOnline || status.status.toLowerCase() === 'running';
+            if (isRecentlyOnline) {
+                online++;
+                if (status.data) {
+                    totalUpload += parseFloat(status.data.tx_bps) || 0;
+                    totalDownload += parseFloat(status.data.rx_bps) || 0;
+                }
+            } else {
+                offline++;
+            }
+        });
 
-      document.getElementById('totalServers').textContent = serverStatus.size;
-      document.getElementById('onlineServers').textContent = online;
-      document.getElementById('offlineServers').textContent = offline;
-      document.getElementById('totalUpload').textContent = `${formatBytes(totalUpload)}/s`;
-      document.getElementById('totalDownload').textContent = `${formatBytes(totalDownload)}/s`;
+        document.getElementById('totalServers').textContent = serverStatus.size;
+        document.getElementById('onlineServers').textContent = online;
+        document.getElementById('offlineServers').textContent = offline;
+        document.getElementById('totalUpload').textContent = `${formatBytes(totalUpload)}/s`;
+        document.getElementById('totalDownload').textContent = `${formatBytes(totalDownload)}/s`;
     }
 
     function formatBytes(bytes) {
-      if (bytes === 0) return '0 B';
-      const k = 1024;
-      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
     setInterval(updateSummary, 5000);
 
     setInterval(async () => {
-      metricsStreamManager.disconnect();
-      await initialize();
+        metricsStreamManager.disconnect();
+        await initialize();
     }, 300000);
 
     // 应用过滤和排序
     function applyFiltersAndSort() {
-      const statusFilter = document.getElementById('statusFilter').value;
-      const userFilter = document.getElementById('userFilter').value;
-      const sortBy = document.getElementById('sortBy').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+        const userFilter = document.getElementById('userFilter').value;
+        const sortBy = document.getElementById('sortBy').value;
 
-      // 过滤实例
-      let filteredInstances = allInstances;
-      if (statusFilter !== 'all') {
-        filteredInstances = filteredInstances.filter(instance => instance.status.toLowerCase() === statusFilter);
-      }
-      if (userFilter !== 'all') {
-        filteredInstances = filteredInstances.filter(instance => instance.owner === userFilter);
-      }
-
-      // 排序实例
-      filteredInstances.sort((a, b) => {
-        if (sortBy === 'name-asc') {
-          return a.name.localeCompare(b.name);
-        } else if (sortBy === 'name-desc') {
-          return b.name.localeCompare(a.name);
-        } else if (sortBy === 'status-asc') {
-          const statusOrder = { 'running': 0, 'sleeping': 1, 'stopped': 2 };
-          return statusOrder[a.status.toLowerCase()] - statusOrder[b.status.toLowerCase()];
-        } else if (sortBy === 'status-desc') {
-          const statusOrder = { 'running': 2, 'sleeping': 1, 'stopped': 0 };
-          return statusOrder[a.status.toLowerCase()] - statusOrder[b.status.toLowerCase()];
+        // 过滤实例
+        let filteredInstances = allInstances;
+        if (statusFilter !== 'all') {
+            filteredInstances = filteredInstances.filter(instance => instance.status.toLowerCase() === statusFilter);
         }
-        return 0;
-      });
-
-      // 重新渲染过滤和排序后的实例
-      instanceMap.clear();
-      serverStatus.clear();
-      metricsStreamManager.disconnect();
-      // 销毁现有图表实例
-      chartInstances.forEach(chart => {
-        if (chart) {
-          chart.destroy();
+        if (userFilter !== 'all') {
+            filteredInstances = filteredInstances.filter(instance => instance.owner === userFilter);
         }
-      });
-      chartInstances.clear();
-      chartDataBuffer.clear();
-      renderInstances(filteredInstances);
-      
-      // 默认监控状态为 running 的实例
-      const runningInstances = filteredInstances
-        .filter(instance => instance.status.toLowerCase() === 'running')
-        .map(instance => instance.repo_id);
-      metricsStreamManager.connect(runningInstances);
-      
-      updateSummary();
-      updateActionButtons(isLoggedIn);
+
+        // 排序实例
+        filteredInstances.sort((a, b) => {
+            if (sortBy === 'name-asc') {
+                return a.name.localeCompare(b.name);
+            } else if (sortBy === 'name-desc') {
+                return b.name.localeCompare(a.name);
+            } else if (sortBy === 'status-asc') {
+                const statusOrder = {'running': 0, 'sleeping': 1, 'stopped': 2};
+                return statusOrder[a.status.toLowerCase()] - statusOrder[b.status.toLowerCase()];
+            } else if (sortBy === 'status-desc') {
+                const statusOrder = {'running': 2, 'sleeping': 1, 'stopped': 0};
+                return statusOrder[a.status.toLowerCase()] - statusOrder[b.status.toLowerCase()];
+            }
+            return 0;
+        });
+
+        // 重新渲染过滤和排序后的实例
+        instanceMap.clear();
+        serverStatus.clear();
+        metricsStreamManager.disconnect();
+        // 销毁现有图表实例
+        chartInstances.forEach(chart => {
+            if (chart) {
+                chart.destroy();
+            }
+        });
+        chartInstances.clear();
+        chartDataBuffer.clear();
+        renderInstances(filteredInstances);
+
+        // 默认监控状态为 running 的实例
+        const runningInstances = filteredInstances
+            .filter(instance => instance.status.toLowerCase() === 'running')
+            .map(instance => instance.repo_id);
+        metricsStreamManager.connect(runningInstances);
+
+        updateSummary();
+        updateActionButtons(isLoggedIn);
     }
 
     // 新增函数：在新标签页中打开实例的URL
     function viewInstance(url) {
-      window.open(url, '_blank');
+        window.open(url, '_blank');
     }
 
     // 新增函数：在新标签页中打开实例的管理页面
     function manageInstance(repoId) {
-      const manageUrl = `https://huggingface.co/spaces/${repoId}`;
-      window.open(manageUrl, '_blank');
+        const manageUrl = `https://huggingface.co/spaces/${repoId}`;
+        window.open(manageUrl, '_blank');
     }
-  </script>
+</script>
 </body>
 </html>

@@ -212,7 +212,6 @@ app.get('/api/proxy/spaces', async (req, res) => {
               const spaceInfoResponse = await axios.get(`https://huggingface.co/api/spaces/${space.id}`, { headers });
               const spaceInfo = spaceInfoResponse.data;
               const spaceRuntime = spaceInfo.runtime || {};
-
               allSpaces.push({
                 repo_id: spaceInfo.id,
                 name: spaceInfo.cardData?.title || spaceInfo.id.split('/')[1],
@@ -225,6 +224,7 @@ app.get('/api/proxy/spaces', async (req, res) => {
                 sdk: spaceInfo.sdk || 'unknown',
                 tags: spaceInfo.tags || [],
                 private: spaceInfo.private || false,
+                short_description:spaceInfo.cardData?.short_description || '',
                 app_port: spaceInfo.cardData?.app_port || 'unknown'
               });
             } catch (error) {
